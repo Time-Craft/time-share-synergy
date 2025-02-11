@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
 import { useQueryClient } from '@tanstack/react-query'
-import { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
+import { RealtimePostgresChangesPayload, REALTIME_LISTEN_TYPES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js'
 
 interface Notification {
   id: string
@@ -14,7 +14,7 @@ interface Notification {
   user_id: string
 }
 
-interface NotificationPayload extends RealtimePostgresChangesPayload {
+interface NotificationPayload extends RealtimePostgresChangesPayload<Notification> {
   new: Notification
   old: Notification
 }
@@ -49,31 +49,35 @@ export const useNotifications = () => {
   useEffect(() => {
     const channel = supabase
       .channel('notifications')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'notifications' 
-      }, async (payload: NotificationPayload) => {
-        const { data: user } = await supabase.auth.getUser()
-        if (!user.user) return
+      .on(
+        'postgres_changes' as REALTIME_LISTEN_TYPES,
+        {
+          event: '*' as REALTIME_POSTGRES_CHANGES_LISTEN_EVENT,
+          schema: 'public',
+          table: 'notifications'
+        },
+        async (payload: NotificationPayload) => {
+          const { data: user } = await supabase.auth.getUser()
+          if (!user.user) return
 
-        if (payload.new && payload.new.user_id === user.user.id) {
-          const notification = payload.new
-          
-          setNotifications(prev => [notification, ...prev])
-          
-          // Show toast for new notifications
-          toast({
-            title: notification.type.charAt(0).toUpperCase() + notification.type.slice(1),
-            description: notification.message,
-          })
+          if (payload.new && payload.new.user_id === user.user.id) {
+            const notification = payload.new
+            
+            setNotifications(prev => [notification, ...prev])
+            
+            // Show toast for new notifications
+            toast({
+              title: notification.type.charAt(0).toUpperCase() + notification.type.slice(1),
+              description: notification.message,
+            })
 
-          // Invalidate relevant queries
-          queryClient.invalidateQueries({ queryKey: ['offers'] })
-          queryClient.invalidateQueries({ queryKey: ['pending-offers'] })
-          queryClient.invalidateQueries({ queryKey: ['transaction-stats'] })
+            // Invalidate relevant queries
+            queryClient.invalidateQueries({ queryKey: ['offers'] })
+            queryClient.invalidateQueries({ queryKey: ['pending-offers'] })
+            queryClient.invalidateQueries({ queryKey: ['transaction-stats'] })
+          }
         }
-      })
+      )
       .subscribe()
 
     return () => {
