@@ -1,0 +1,61 @@
+
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/integrations/supabase/client'
+
+interface Offer {
+  id: string
+  title: string
+  description: string
+  hours: number
+  user: {
+    name: string
+    avatar: string
+  }
+  status: string
+}
+
+export const useExploreOffers = () => {
+  const queryClient = useQueryClient()
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const { data: offers, isLoading } = useQuery({
+    queryKey: ['offers', searchQuery],
+    queryFn: async () => {
+      const query = supabase
+        .from('offers')
+        .select('*')
+        .eq('status', 'available')
+        
+      if (searchQuery) {
+        query.ilike('title', `%${searchQuery}%`)
+      }
+      
+      const { data, error } = await query
+      if (error) throw error
+      return data as Offer[]
+    }
+  })
+
+  const acceptOffer = useMutation({
+    mutationFn: async (offerId: string) => {
+      const { error } = await supabase
+        .from('offers')
+        .update({ status: 'pending' })
+        .eq('id', offerId)
+      
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['offers'] })
+    }
+  })
+
+  return {
+    offers,
+    isLoading,
+    searchQuery,
+    setSearchQuery,
+    acceptOffer: acceptOffer.mutate
+  }
+}
