@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
 import { useQueryClient } from '@tanstack/react-query'
+import { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
 interface Notification {
   id: string
@@ -10,6 +11,12 @@ interface Notification {
   type: 'info' | 'success' | 'error'
   createdAt: string
   read: boolean
+  user_id: string
+}
+
+interface NotificationPayload extends RealtimePostgresChangesPayload {
+  new: Notification
+  old: Notification
 }
 
 export const useNotifications = () => {
@@ -46,12 +53,12 @@ export const useNotifications = () => {
         event: '*', 
         schema: 'public', 
         table: 'notifications' 
-      }, async (payload) => {
+      }, async (payload: NotificationPayload) => {
         const { data: user } = await supabase.auth.getUser()
         if (!user.user) return
 
         if (payload.new && payload.new.user_id === user.user.id) {
-          const notification = payload.new as Notification
+          const notification = payload.new
           
           setNotifications(prev => [notification, ...prev])
           
