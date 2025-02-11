@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
 import { useQueryClient } from '@tanstack/react-query'
-import { RealtimePostgresChangesPayload, REALTIME_LISTEN_TYPES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js'
+import { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
 interface Notification {
   id: string
@@ -14,7 +14,9 @@ interface Notification {
   user_id: string
 }
 
-interface NotificationPayload extends RealtimePostgresChangesPayload<Notification> {
+type NotificationPayload = RealtimePostgresChangesPayload<{
+  [key: string]: any
+}> & {
   new: Notification
   old: Notification
 }
@@ -50,9 +52,9 @@ export const useNotifications = () => {
     const channel = supabase
       .channel('notifications')
       .on(
-        'postgres_changes' as REALTIME_LISTEN_TYPES,
+        'postgres_changes',
         {
-          event: '*' as REALTIME_POSTGRES_CHANGES_LISTEN_EVENT,
+          event: '*',
           schema: 'public',
           table: 'notifications'
         },
