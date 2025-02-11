@@ -7,21 +7,27 @@ import { supabase } from "@/integrations/supabase/client"
 import { Link, useNavigate } from "react-router-dom"
 import { useToast } from "@/components/ui/use-toast"
 
-const Login = () => {
+const SignUp = () => {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
       })
       if (error) throw error
-      navigate("/")
+      
+      toast({
+        title: "Success",
+        description: "Account created successfully! Please check your email to verify your account.",
+      })
+      
+      navigate("/login")
     } catch (error: any) {
       toast({
         title: "Error",
@@ -35,10 +41,10 @@ const Login = () => {
     <div className="container mx-auto p-6 flex items-center justify-center min-h-screen">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl text-center">Welcome Back</CardTitle>
+          <CardTitle className="text-2xl text-center">Create Account</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleSignUp} className="space-y-4">
             <div className="space-y-2">
               <Input
                 type="email"
@@ -56,12 +62,12 @@ const Login = () => {
               />
             </div>
             <Button type="submit" className="w-full">
-              Sign In
+              Sign Up
             </Button>
             <p className="text-center text-sm">
-              Don't have an account?{" "}
-              <Link to="/signup" className="text-primary hover:underline">
-                Sign Up
+              Already have an account?{" "}
+              <Link to="/login" className="text-primary hover:underline">
+                Sign In
               </Link>
             </p>
           </form>
@@ -71,4 +77,4 @@ const Login = () => {
   )
 }
 
-export default Login
+export default SignUp
