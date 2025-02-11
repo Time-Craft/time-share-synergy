@@ -4,14 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useState } from "react"
 import { supabase } from "@/integrations/supabase/client"
-import { Link, useNavigate } from "react-router-dom"
-import { useToast } from "@/components/ui/use-toast"
 
 const Login = () => {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const navigate = useNavigate()
-  const { toast } = useToast()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -21,13 +17,8 @@ const Login = () => {
         password,
       })
       if (error) throw error
-      navigate("/")
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      })
+    } catch (error) {
+      console.error("Error logging in:", error)
     }
   }
 
@@ -58,12 +49,6 @@ const Login = () => {
             <Button type="submit" className="w-full">
               Sign In
             </Button>
-            <p className="text-center text-sm">
-              Don't have an account?{" "}
-              <Link to="/signup" className="text-primary hover:underline">
-                Sign Up
-              </Link>
-            </p>
           </form>
         </CardContent>
       </Card>
