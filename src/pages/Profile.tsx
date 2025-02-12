@@ -3,11 +3,33 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { supabase } from "@/integrations/supabase/client"
+import { useToast } from "@/components/ui/use-toast"
 
 const Profile = () => {
+  const { toast } = useToast()
+
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error logging out",
+        description: error.message,
+      })
+    }
+  }
+
   return (
     <div className="container mx-auto p-6">
-      <h1 className="text-4xl font-bold mb-8">Profile</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-4xl font-bold">Profile</h1>
+        <Button variant="outline" onClick={handleLogout}>
+          Logout
+        </Button>
+      </div>
       
       <div className="grid gap-6">
         <Card>
