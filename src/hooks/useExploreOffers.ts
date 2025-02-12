@@ -24,7 +24,13 @@ export const useExploreOffers = () => {
     queryFn: async () => {
       const query = supabase
         .from('offers')
-        .select('*, profiles(username, avatar_url)')
+        .select(`
+          *,
+          profiles (
+            username,
+            avatar_url
+          )
+        `)
         .eq('status', 'available')
         
       if (searchQuery) {

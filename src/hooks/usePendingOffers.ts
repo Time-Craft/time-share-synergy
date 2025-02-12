@@ -22,7 +22,13 @@ export const usePendingOffers = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('offers')
-        .select('*, profiles(username, avatar_url)')
+        .select(`
+          *,
+          profiles (
+            username,
+            avatar_url
+          )
+        `)
         .eq('status', 'pending')
       
       if (error) throw error
