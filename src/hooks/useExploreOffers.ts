@@ -24,13 +24,7 @@ export const useExploreOffers = () => {
     queryFn: async () => {
       const query = supabase
         .from('offers')
-        .select(`
-          *,
-          profiles (
-            username,
-            avatar_url
-          )
-        `)
+        .select('*')
         .eq('status', 'available')
         
       if (searchQuery) {
@@ -47,8 +41,8 @@ export const useExploreOffers = () => {
         hours: offer.hours,
         status: offer.status,
         user: {
-          name: offer.profiles?.username || 'Unknown User',
-          avatar: offer.profiles?.avatar_url || '/placeholder.svg'
+          name: 'User', // We'll fetch user details separately if needed
+          avatar: '/placeholder.svg'
         }
       })) as Offer[]
     }
