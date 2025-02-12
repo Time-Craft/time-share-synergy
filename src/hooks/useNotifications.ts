@@ -40,7 +40,10 @@ export const useNotifications = () => {
         .order('created_at', { ascending: false })
 
       if (data) {
-        setNotifications(data as Notification[])
+        setNotifications(data.map(notification => ({
+          ...notification,
+          createdAt: notification.created_at
+        })) as Notification[])
       }
     }
 

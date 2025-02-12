@@ -22,11 +22,22 @@ export const usePendingOffers = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('offers')
-        .select('*')
+        .select('*, profiles(username, avatar_url)')
         .eq('status', 'pending')
       
       if (error) throw error
-      return data as PendingOffer[]
+
+      return data.map(offer => ({
+        id: offer.id,
+        title: offer.title,
+        description: offer.description,
+        hours: offer.hours,
+        status: offer.status,
+        user: {
+          name: offer.profiles?.username || 'Unknown User',
+          avatar: offer.profiles?.avatar_url || '/placeholder.svg'
+        }
+      })) as PendingOffer[]
     }
   })
 
