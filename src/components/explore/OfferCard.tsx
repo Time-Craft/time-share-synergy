@@ -11,14 +11,16 @@ interface OfferCardProps {
     description: string
     hours: number
     user: {
+      id: string  // Added id to user type
       name: string
       avatar: string
     }
     status: string
   }
+  onAccept: () => void  // Added onAccept to props
 }
 
-const OfferCard = ({ offer }: OfferCardProps) => {
+const OfferCard = ({ offer, onAccept }: OfferCardProps) => {
   return (
     <Card>
       <CardContent className="p-6">
@@ -26,7 +28,7 @@ const OfferCard = ({ offer }: OfferCardProps) => {
         <p className="mt-2 text-muted-foreground">{offer.description}</p>
         <div className="mt-4 flex items-center justify-between">
           <OfferStatus status={offer.status} />
-          <OfferActions offerId={offer.id} />
+          <OfferActions offerId={offer.id} onAccept={onAccept} />
         </div>
       </CardContent>
     </Card>

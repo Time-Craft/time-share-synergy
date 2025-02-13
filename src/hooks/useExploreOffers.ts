@@ -9,6 +9,7 @@ interface Offer {
   description: string
   hours: number
   user: {
+    id: string
     name: string
     avatar: string
   }
@@ -27,6 +28,7 @@ export const useExploreOffers = () => {
         .select(`
           *,
           profiles!offers_profile_id_fkey (
+            id,
             username,
             avatar_url
           )
@@ -47,6 +49,7 @@ export const useExploreOffers = () => {
         hours: offer.hours,
         status: offer.status,
         user: {
+          id: offer.profiles?.id || '',
           name: offer.profiles?.username || 'Unknown User',
           avatar: offer.profiles?.avatar_url || '/placeholder.svg'
         }
