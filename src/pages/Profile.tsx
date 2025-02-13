@@ -7,8 +7,11 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 import { useQuery } from "@tanstack/react-query"
+import { Plus } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 const Profile = () => {
+  const navigate = useNavigate()
   const { toast } = useToast()
   const [username, setUsername] = useState("")
   const [services, setServices] = useState("")
@@ -85,60 +88,111 @@ const Profile = () => {
     }
   }
 
+  const { data: userOffers } = useQuery({
+    queryKey: ['user-offers'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error("No user found")
+
+      const { data, error } = await supabase
+        .from('offers')
+        .select('*')
+        .eq('profile_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return data
+    }
+  })
+
   return (
-    <div className="container mx-auto p-6 min-h-[calc(100vh-4rem)] pb-20 md:pb-6">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold">Profile</h1>
+    <div className="container mx-auto p-4 space-y-6 max-w-2xl">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl md:text-4xl font-bold">Profile</h1>
         <Button variant="outline" onClick={handleLogout}>
           Logout
         </Button>
       </div>
       
-      <div className="grid gap-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center space-x-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={profile?.avatar_url || "/placeholder.svg"} />
-                <AvatarFallback>
-                  {username?.substring(0, 2).toUpperCase() || 'UN'}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <CardTitle>User Profile</CardTitle>
-              </div>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center space-x-4">
+            <Avatar className="h-16 w-16 md:h-20 md:w-20">
+              <AvatarImage src={profile?.avatar_url || "/placeholder.svg"} />
+              <AvatarFallback>
+                {username?.substring(0, 2).toUpperCase() || 'UN'}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <CardTitle className="text-xl md:text-2xl">User Profile</CardTitle>
             </div>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-6" onSubmit={handleSubmit}>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Username</label>
-                <Input 
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Your username" 
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Services Offered</label>
-                <Input 
-                  value={services}
-                  onChange={(e) => setServices(e.target.value)}
-                  placeholder="e.g., Programming, Teaching, Gardening" 
-                />
-                <p className="text-sm text-muted-foreground">
-                  Separate multiple services with commas
-                </p>
-              </div>
-              
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Save Changes"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Username</label>
+              <Input 
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Your username" 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Services Offered</label>
+              <Input 
+                value={services}
+                onChange={(e) => setServices(e.target.value)}
+                placeholder="e.g., Programming, Teaching, Gardening" 
+              />
+              <p className="text-sm text-muted-foreground">
+                Separate multiple services with commas
+              </p>
+            </div>
+            
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>My Offers</CardTitle>
+            <Button size="sm" onClick={() => navigate('/offer')}>
+              <Plus className="h-4 w-4 mr-1" />
+              New Offer
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {userOffers?.length === 0 ? (
+              <p className="text-center text-muted-foreground">
+                You haven't created any offers yet
+              </p>
+            ) : (
+              userOffers?.map((offer) => (
+                <Card key={offer.id}>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold">{offer.title}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">{offer.description}</p>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-sm">{offer.hours} hours</span>
+                      <span className="text-sm capitalize px-2 py-1 bg-secondary rounded-full">
+                        {offer.status}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

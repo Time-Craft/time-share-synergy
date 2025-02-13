@@ -1,26 +1,21 @@
 
 import { Button } from "@/components/ui/button"
-import { Check, X } from "lucide-react"
+import { Check } from "lucide-react"
 
 interface OfferActionsProps {
   offerId: string
+  onAccept: () => void
 }
 
-const OfferActions = ({ offerId }: OfferActionsProps) => {
+const OfferActions = ({ onAccept }: OfferActionsProps) => {
   return (
     <div className="flex space-x-2">
       <Button 
-        variant="outline" 
         size="sm"
-        onClick={() => console.log('Declined offer:', offerId)}
+        onClick={onAccept}
       >
-        <X className="h-4 w-4" />
-      </Button>
-      <Button 
-        size="sm"
-        onClick={() => console.log('Accepted offer:', offerId)}
-      >
-        <Check className="h-4 w-4" />
+        <Check className="h-4 w-4 mr-1" />
+        Accept
       </Button>
     </div>
   )
