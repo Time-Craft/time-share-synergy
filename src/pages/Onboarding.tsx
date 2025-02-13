@@ -7,10 +7,12 @@ import { Input } from "@/components/ui/input"
 import { CheckCircle } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
+import { useQueryClient } from "@tanstack/react-query"
 
 const Onboarding = () => {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [username, setUsername] = useState("")
   const [services, setServices] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -34,12 +36,16 @@ const Onboarding = () => {
 
       if (error) throw error
 
+      // Invalidate the profile query to ensure fresh data
+      await queryClient.invalidateQueries({ queryKey: ['profile'] })
+
       toast({
         title: "Profile updated",
         description: "Your profile has been successfully updated"
       })
       
-      navigate('/')
+      // Redirect to home page after successful update
+      navigate('/', { replace: true })
     } catch (error: any) {
       toast({
         variant: "destructive",
