@@ -2,23 +2,25 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import OfferCard from "../explore/OfferCard"
+import { usePendingOffers } from "@/hooks/usePendingOffers"
 
 const PendingOffers = () => {
-  // Mock data - replace with real data from your backend
-  const pendingOffers = [
-    {
-      id: '1',
-      title: 'Programming Help',
-      description: 'Help with React development',
-      hours: 2,
-      user: {
-        name: 'John Doe',
-        avatar: '/placeholder.svg'
-      },
-      status: 'pending'
-    },
-    // Add more mock offers as needed
-  ]
+  const { pendingOffers, isLoading, completeOffer } = usePendingOffers()
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Pending Offers</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center text-muted-foreground">
+            Loading offers...
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card>
@@ -28,9 +30,19 @@ const PendingOffers = () => {
       <CardContent>
         <ScrollArea className="h-[400px]">
           <div className="space-y-4">
-            {pendingOffers.map((offer) => (
-              <OfferCard key={offer.id} offer={offer} />
-            ))}
+            {!pendingOffers?.length ? (
+              <div className="text-center text-muted-foreground">
+                No pending offers
+              </div>
+            ) : (
+              pendingOffers.map((offer) => (
+                <OfferCard 
+                  key={offer.id} 
+                  offer={offer} 
+                  onAccept={() => completeOffer(offer.id)}
+                />
+              ))
+            )}
           </div>
         </ScrollArea>
       </CardContent>
