@@ -26,7 +26,7 @@ export const useExploreOffers = () => {
         .from('offers')
         .select(`
           *,
-          profiles (
+          profiles!offers_profile_id_fkey (
             username,
             avatar_url
           )

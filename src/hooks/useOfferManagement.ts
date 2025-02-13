@@ -16,15 +16,15 @@ export const useOfferManagement = () => {
 
   const createOffer = useMutation({
     mutationFn: async (offer: OfferInput) => {
-      const { data: user } = await supabase.auth.getUser()
-      if (!user.user) throw new Error('User not authenticated')
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
 
       const { error } = await supabase
         .from('offers')
         .insert([{ 
           ...offer, 
           status: 'available',
-          user_id: user.user.id,
+          profile_id: user.id,
           created_at: new Date().toISOString()
         }])
       
@@ -48,8 +48,8 @@ export const useOfferManagement = () => {
 
   const updateOffer = useMutation({
     mutationFn: async ({ id, ...updates }: OfferInput & { id: string }) => {
-      const { data: user } = await supabase.auth.getUser()
-      if (!user.user) throw new Error('User not authenticated')
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
 
       const { error } = await supabase
         .from('offers')
@@ -58,7 +58,7 @@ export const useOfferManagement = () => {
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
-        .eq('user_id', user.user.id) // Ensure user owns the offer
+        .eq('profile_id', user.id)
       
       if (error) throw error
     },
@@ -80,14 +80,14 @@ export const useOfferManagement = () => {
 
   const deleteOffer = useMutation({
     mutationFn: async (offerId: string) => {
-      const { data: user } = await supabase.auth.getUser()
-      if (!user.user) throw new Error('User not authenticated')
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
 
       const { error } = await supabase
         .from('offers')
         .delete()
         .eq('id', offerId)
-        .eq('user_id', user.user.id) // Ensure user owns the offer
+        .eq('profile_id', user.id)
       
       if (error) throw error
     },

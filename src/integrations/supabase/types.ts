@@ -42,32 +42,40 @@ export type Database = {
           description: string | null
           hours: number
           id: string
-          status: string
+          profile_id: string
+          status: string | null
           title: string
           updated_at: string
-          user_id: string
         }
         Insert: {
           created_at?: string
           description?: string | null
           hours: number
           id?: string
-          status?: string
+          profile_id: string
+          status?: string | null
           title: string
           updated_at?: string
-          user_id: string
         }
         Update: {
           created_at?: string
           description?: string | null
           hours?: number
           id?: string
-          status?: string
+          profile_id?: string
+          status?: string | null
           title?: string
           updated_at?: string
-          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "offers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
