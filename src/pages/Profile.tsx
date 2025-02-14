@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { useQuery } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
 import { useNavigate } from "react-router-dom"
+import OfferCard from "@/components/explore/OfferCard" // Added this import
 
 const Profile = () => {
   const navigate = useNavigate()
