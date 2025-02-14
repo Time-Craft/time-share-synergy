@@ -176,18 +176,18 @@ const Profile = () => {
               </p>
             ) : (
               userOffers?.map((offer) => (
-                <Card key={offer.id}>
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold">{offer.title}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">{offer.description}</p>
-                    <div className="flex justify-between items-center mt-2">
-                      <span className="text-sm">{offer.hours} hours</span>
-                      <span className="text-sm capitalize px-2 py-1 bg-secondary rounded-full">
-                        {offer.status}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
+                <OfferCard 
+                  key={offer.id} 
+                  offer={{
+                    ...offer,
+                    user: {
+                      id: offer.profile_id,
+                      name: profile?.username || 'Unknown',
+                      avatar: profile?.avatar_url || '/placeholder.svg'
+                    }
+                  }}
+                  showApplications={true}
+                />
               ))
             )}
           </div>

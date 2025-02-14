@@ -36,6 +36,48 @@ export type Database = {
         }
         Relationships: []
       }
+      offer_applications: {
+        Row: {
+          applicant_id: string | null
+          created_at: string
+          id: string
+          offer_id: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          applicant_id?: string | null
+          created_at?: string
+          id?: string
+          offer_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          applicant_id?: string | null
+          created_at?: string
+          id?: string
+          offer_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_applications_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_applications_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offers: {
         Row: {
           created_at: string
