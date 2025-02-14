@@ -12,6 +12,8 @@ const OfferStatus = ({ status }: OfferStatusProps) => {
         return 'bg-green-500/10 text-green-500'
       case 'pending':
         return 'bg-yellow-500/10 text-yellow-500'
+      case 'booked':
+        return 'bg-blue-500/10 text-blue-500'
       case 'completed':
         return 'bg-blue-500/10 text-blue-500'
       default:
