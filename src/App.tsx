@@ -33,7 +33,17 @@ const App = () => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
-      setIsNewUser(_event === 'SIGNED_IN')
+      if (_event === 'SIGNED_IN') {
+        // Check if the user has a username set
+        supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', session?.user?.id)
+          .single()
+          .then(({ data }) => {
+            setIsNewUser(!data?.username)
+          })
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -55,7 +65,7 @@ const App = () => {
               <Route path="*" element={<Login />} />
             ) : isNewUser ? (
               <>
-                <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/onboarding" element={<Onboarding setIsNewUser={setIsNewUser} />} />
                 <Route path="*" element={<Navigate to="/onboarding" replace />} />
               </>
             ) : (
@@ -65,7 +75,7 @@ const App = () => {
                 <Route path="/offer" element={<Offer />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/challenges" element={<Challenges />} />
-                <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/onboarding" element={<Onboarding setIsNewUser={setIsNewUser} />} />
                 <Route path="*" element={<NotFound />} />
               </>
             )}
@@ -77,4 +87,3 @@ const App = () => {
 }
 
 export default App
-

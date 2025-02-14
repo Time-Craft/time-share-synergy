@@ -9,7 +9,11 @@ import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 import { useQueryClient } from "@tanstack/react-query"
 
-const Onboarding = () => {
+interface OnboardingProps {
+  setIsNewUser: (value: boolean) => void;
+}
+
+const Onboarding = ({ setIsNewUser }: OnboardingProps) => {
   const navigate = useNavigate()
   const { toast } = useToast()
   const queryClient = useQueryClient()
@@ -44,7 +48,8 @@ const Onboarding = () => {
         description: "Your profile has been successfully updated"
       })
       
-      // Redirect to home page after successful update
+      // Set isNewUser to false and redirect to home page
+      setIsNewUser(false)
       navigate('/', { replace: true })
     } catch (error: any) {
       toast({
