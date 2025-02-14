@@ -22,7 +22,10 @@ export const useOfferManagement = () => {
       const { error } = await supabase
         .from('offers')
         .insert([{ 
-          ...offer, 
+          title: offer.title,
+          description: offer.description,
+          hours: offer.hours,
+          service_type: offer.serviceType, // Changed from serviceType to service_type
           status: 'available',
           profile_id: user.id,
           created_at: new Date().toISOString()
@@ -47,14 +50,17 @@ export const useOfferManagement = () => {
   })
 
   const updateOffer = useMutation({
-    mutationFn: async ({ id, ...updates }: OfferInput & { id: string }) => {
+    mutationFn: async ({ id, ...offer }: OfferInput & { id: string }) => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
 
       const { error } = await supabase
         .from('offers')
         .update({ 
-          ...updates,
+          title: offer.title,
+          description: offer.description,
+          hours: offer.hours,
+          service_type: offer.serviceType, // Changed from serviceType to service_type
           updated_at: new Date().toISOString()
         })
         .eq('id', id)

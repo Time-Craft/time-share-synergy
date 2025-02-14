@@ -43,6 +43,7 @@ export type Database = {
           hours: number
           id: string
           profile_id: string
+          service_type: string
           status: string | null
           title: string
           updated_at: string
@@ -53,6 +54,7 @@ export type Database = {
           hours: number
           id?: string
           profile_id: string
+          service_type: string
           status?: string | null
           title: string
           updated_at?: string
@@ -63,6 +65,7 @@ export type Database = {
           hours?: number
           id?: string
           profile_id?: string
+          service_type?: string
           status?: string | null
           title?: string
           updated_at?: string
