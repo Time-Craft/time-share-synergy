@@ -10,10 +10,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 const Login = () => {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsLoading(true)
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
@@ -26,15 +28,21 @@ const Login = () => {
         title: "Error logging in",
         description: error.message,
       })
+    } finally {
+      setIsLoading(false)
     }
   }
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsLoading(true)
     try {
       const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: window.location.origin,
+        },
       })
       if (error) throw error
       
@@ -48,14 +56,16 @@ const Login = () => {
         title: "Error signing up",
         description: error.message,
       })
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
-    <div className="container mx-auto p-6 flex items-center justify-center min-h-screen">
-      <Card className="w-full max-w-md">
+    <div className="container mx-auto p-6 flex items-center justify-center min-h-screen bg-cream">
+      <Card className="w-full max-w-md gradient-border card-hover">
         <CardHeader>
-          <CardTitle className="text-2xl text-center">TimeShare</CardTitle>
+          <CardTitle className="text-2xl text-center text-navy">TimeShare</CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="space-y-4">
@@ -72,6 +82,7 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  className="bg-cream border-mint/20 focus:border-teal"
                 />
                 <Input
                   type="password"
@@ -79,9 +90,14 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  className="bg-cream border-mint/20 focus:border-teal"
                 />
-                <Button type="submit" className="w-full">
-                  Sign In
+                <Button 
+                  type="submit" 
+                  className="w-full bg-teal hover:bg-teal/90 text-cream"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Signing in..." : "Sign In"}
                 </Button>
               </form>
             </TabsContent>
@@ -94,6 +110,7 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  className="bg-cream border-mint/20 focus:border-teal"
                 />
                 <Input
                   type="password"
@@ -101,9 +118,14 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  className="bg-cream border-mint/20 focus:border-teal"
                 />
-                <Button type="submit" className="w-full">
-                  Create Account
+                <Button 
+                  type="submit" 
+                  className="w-full bg-teal hover:bg-teal/90 text-cream"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Creating account..." : "Create Account"}
                 </Button>
               </form>
             </TabsContent>

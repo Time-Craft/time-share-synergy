@@ -16,7 +16,14 @@ import Onboarding from "./pages/Onboarding"
 import Challenges from "./pages/Challenges"
 import NotFound from "./pages/NotFound"
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+})
 
 const App = () => {
   const [session, setSession] = useState<any>(null)
@@ -24,33 +31,68 @@ const App = () => {
   const [isNewUser, setIsNewUser] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setIsLoading(false)
-    })
+    // Initial session check
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession()
+        setSession(currentSession)
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      if (_event === 'SIGNED_IN') {
-        // Check if the user has a username set
-        supabase
-          .from('profiles')
-          .select('username')
-          .eq('id', session?.user?.id)
-          .single()
-          .then(({ data }) => {
-            setIsNewUser(!data?.username)
-          })
+        if (currentSession?.user) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', currentSession.user.id)
+            .single()
+          
+          setIsNewUser(!data?.username)
+        }
+      } catch (error) {
+        console.error('Error checking auth:', error)
+        // If there's an error, we clear the session to be safe
+        setSession(null)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    initializeAuth()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      console.log('Auth state changed:', event)
+      setSession(newSession)
+
+      if (event === 'SIGNED_IN' && newSession?.user) {
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', newSession.user.id)
+            .single()
+          
+          setIsNewUser(!data?.username)
+        } catch (error) {
+          console.error('Error checking profile:', error)
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setIsNewUser(false)
+        // Clear any cached data when signing out
+        queryClient.clear()
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
+  // Handle loading state
   if (isLoading) {
-    return <div>Loading...</div>
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-cream">
+        <div className="text-navy">Loading...</div>
+      </div>
+    )
   }
 
   return (
