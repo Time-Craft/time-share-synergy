@@ -32,53 +32,21 @@ const App = () => {
 
   useEffect(() => {
     // Check current session
-    const initSession = async () => {
-      try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession()
-        console.log('Initial session check:', currentSession)
-        setSession(currentSession)
-        
-        if (currentSession?.user) {
-          await checkUserProfile(currentSession.user.id)
-        }
-      } catch (error) {
-        console.error('Session init error:', error)
-      } finally {
-        setIsLoading(false)
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession)
+      if (currentSession?.user) {
+        checkUserProfile(currentSession.user.id)
       }
-    }
-
-    initSession()
+      setIsLoading(false)
+    })
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      console.log('Auth state changed:', event, newSession)
+      console.log('Auth state changed:', event)
       setSession(newSession)
 
       if (event === 'SIGNED_IN' && newSession?.user) {
-        try {
-          // Check if profile exists
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('username')
-            .eq('id', newSession.user.id)
-            .single()
-
-          // If no profile exists, create one
-          if (!profile) {
-            const { error: insertError } = await supabase
-              .from('profiles')
-              .insert([{ id: newSession.user.id }])
-            
-            if (insertError) throw insertError
-            setIsNewUser(true)
-          } else {
-            setIsNewUser(!profile.username)
-          }
-        } catch (error) {
-          console.error('Profile check error:', error)
-          setIsNewUser(false)
-        }
+        await checkUserProfile(newSession.user.id)
       } else if (event === 'SIGNED_OUT') {
         setIsNewUser(false)
         queryClient.clear()
@@ -92,13 +60,12 @@ const App = () => {
 
   const checkUserProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('profiles')
         .select('username')
         .eq('id', userId)
         .single()
       
-      if (error) throw error
       setIsNewUser(!data?.username)
     } catch (error) {
       console.error('Error checking profile:', error)

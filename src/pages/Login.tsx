@@ -1,5 +1,6 @@
 
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 
 const Login = () => {
+  const navigate = useNavigate()
   const { toast } = useToast()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -21,13 +23,16 @@ const Login = () => {
       const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/onboarding`,
+        },
       })
 
       if (error) throw error
 
       toast({
-        title: "Account created",
-        description: "You can now sign in with your credentials.",
+        title: "Check your email",
+        description: "We've sent you a link to verify your email address.",
       })
     } catch (error: any) {
       toast({
@@ -53,9 +58,11 @@ const Login = () => {
       if (error) throw error
 
       toast({
-        title: "Welcome back!",
-        description: "Successfully signed in.",
+        title: "Signed in successfully",
+        description: "You are now being redirected.",
       })
+
+      navigate('/')
     } catch (error: any) {
       toast({
         variant: "destructive",
