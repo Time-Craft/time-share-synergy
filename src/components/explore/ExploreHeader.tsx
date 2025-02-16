@@ -10,15 +10,18 @@ interface ExploreHeaderProps {
 
 const ExploreHeader = ({ view, onViewChange }: ExploreHeaderProps) => {
   return (
-    <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 mb-6">
-      <h1 className="text-3xl font-bold">Explore Time Offers</h1>
-      <div className="flex items-center space-x-4 w-full md:w-auto">
-        <SearchBar />
-        <div className="flex space-x-2">
+    <div className="flex flex-col space-y-4 mb-6">
+      <h1 className="text-2xl md:text-3xl font-bold text-navy">Explore Time Offers</h1>
+      <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
+        <div className="flex-1">
+          <SearchBar />
+        </div>
+        <div className="flex space-x-2 self-end">
           <Button
             variant={view === 'list' ? 'default' : 'outline'}
             size="icon"
             onClick={() => onViewChange('list')}
+            className="bg-teal text-cream hover:bg-teal/90"
           >
             <List className="h-4 w-4" />
           </Button>
@@ -26,6 +29,7 @@ const ExploreHeader = ({ view, onViewChange }: ExploreHeaderProps) => {
             variant={view === 'map' ? 'default' : 'outline'}
             size="icon"
             onClick={() => onViewChange('map')}
+            className="bg-teal text-cream hover:bg-teal/90"
           >
             <Map className="h-4 w-4" />
           </Button>

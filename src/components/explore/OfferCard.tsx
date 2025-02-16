@@ -46,7 +46,11 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
   const renderApplyButton = () => {
     if (userApplication) {
       return (
-        <Button disabled variant="secondary">
+        <Button 
+          disabled 
+          variant="secondary"
+          className="w-full md:w-auto mt-4 md:mt-0"
+        >
           <Hourglass className="h-4 w-4 mr-1" />
           {userApplication.status === 'pending' ? 'Application Pending' : 
             userApplication.status === 'accepted' ? 'Application Accepted' : 
@@ -59,6 +63,7 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
       <Button 
         onClick={() => applyToOffer(offer.id)}
         disabled={offer.status !== 'available'}
+        className="w-full md:w-auto mt-4 md:mt-0 bg-teal hover:bg-teal/90 text-cream"
       >
         <Check className="h-4 w-4 mr-1" />
         {offer.status === 'available' ? 'Apply' : 'Not Available'}
@@ -67,22 +72,22 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
   }
 
   return (
-    <Card>
+    <Card className="gradient-border card-hover">
       <CardContent className="p-6">
         <OfferHeader user={offer.user} title={offer.title} hours={offer.hours} />
-        <p className="mt-2 text-muted-foreground">{offer.description}</p>
-        <div className="mt-4 flex items-center justify-between">
+        <p className="mt-2 text-navy/80">{offer.description}</p>
+        <div className="mt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <OfferStatus status={offer.status} />
           {!isOwner && renderApplyButton()}
         </div>
 
         {showApplications && applications && applications.length > 0 && (
-          <div className="mt-4 border-t pt-4">
-            <h4 className="font-semibold mb-2">Applications</h4>
+          <div className="mt-4 border-t border-mint/20 pt-4">
+            <h4 className="font-semibold mb-2 text-navy">Applications</h4>
             <div className="space-y-2">
               {applications.map((application: any) => (
-                <div key={application.id} className="flex items-center justify-between bg-secondary p-2 rounded">
-                  <span>{application.profiles.username}</span>
+                <div key={application.id} className="flex flex-col md:flex-row md:items-center justify-between gap-2 bg-mint/10 p-3 rounded-lg">
+                  <span className="text-navy">{application.profiles.username}</span>
                   {application.status === 'pending' && (
                     <div className="flex space-x-2">
                       <Button 
@@ -92,6 +97,7 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
                           applicationId: application.id, 
                           status: 'accepted' 
                         })}
+                        className="bg-teal hover:bg-teal/90 text-cream"
                       >
                         <Check className="h-4 w-4" />
                       </Button>

@@ -34,16 +34,16 @@ const MainNav = () => {
                   New Offer
                 </Button>
               </Link>
-              <Link to="/profile">
-                <Button variant="ghost" className="flex items-center gap-2 text-navy hover:text-teal hover:bg-mint/10">
-                  <User className="h-4 w-4" />
-                  Profile
-                </Button>
-              </Link>
               <Link to="/challenges">
                 <Button variant="ghost" className="flex items-center gap-2 text-navy hover:text-teal hover:bg-mint/10">
                   <Trophy className="h-4 w-4" />
                   Challenges
+                </Button>
+              </Link>
+              <Link to="/profile">
+                <Button variant="ghost" className="flex items-center gap-2 text-navy hover:text-teal hover:bg-mint/10">
+                  <User className="h-4 w-4" />
+                  Profile
                 </Button>
               </Link>
             </div>
@@ -57,7 +57,7 @@ const MainNav = () => {
           <Link to="/" className="flex-1">
             <Button 
               variant={isActive('/') ? 'default' : 'ghost'} 
-              className="w-full flex flex-col items-center gap-1 h-auto py-2 text-navy"
+              className={`w-full flex flex-col items-center gap-1 h-auto py-2 ${isActive('/') ? 'text-cream bg-teal hover:bg-teal/90' : 'text-navy hover:text-teal hover:bg-mint/10'}`}
               size="sm"
             >
               <Home className="h-5 w-5" />
@@ -67,7 +67,7 @@ const MainNav = () => {
           <Link to="/explore" className="flex-1">
             <Button 
               variant={isActive('/explore') ? 'default' : 'ghost'} 
-              className="w-full flex flex-col items-center gap-1 h-auto py-2 text-navy"
+              className={`w-full flex flex-col items-center gap-1 h-auto py-2 ${isActive('/explore') ? 'text-cream bg-teal hover:bg-teal/90' : 'text-navy hover:text-teal hover:bg-mint/10'}`}
               size="sm"
             >
               <Search className="h-5 w-5" />
@@ -77,31 +77,31 @@ const MainNav = () => {
           <Link to="/offer" className="flex-1">
             <Button 
               variant={isActive('/offer') ? 'default' : 'ghost'} 
-              className="w-full flex flex-col items-center gap-1 h-auto py-2 text-navy"
+              className={`w-full flex flex-col items-center gap-1 h-auto py-2 ${isActive('/offer') ? 'text-cream bg-teal hover:bg-teal/90' : 'text-navy hover:text-teal hover:bg-mint/10'}`}
               size="sm"
             >
               <Plus className="h-5 w-5" />
               <span className="text-xs">New</span>
             </Button>
           </Link>
-          <Link to="/profile" className="flex-1">
-            <Button 
-              variant={isActive('/profile') ? 'default' : 'ghost'} 
-              className="w-full flex flex-col items-center gap-1 h-auto py-2 text-navy"
-              size="sm"
-            >
-              <User className="h-5 w-5" />
-              <span className="text-xs">Profile</span>
-            </Button>
-          </Link>
           <Link to="/challenges" className="flex-1">
             <Button 
               variant={isActive('/challenges') ? 'default' : 'ghost'} 
-              className="w-full flex flex-col items-center gap-1 h-auto py-2 text-navy"
+              className={`w-full flex flex-col items-center gap-1 h-auto py-2 ${isActive('/challenges') ? 'text-cream bg-teal hover:bg-teal/90' : 'text-navy hover:text-teal hover:bg-mint/10'}`}
               size="sm"
             >
               <Trophy className="h-5 w-5" />
               <span className="text-xs">Goals</span>
+            </Button>
+          </Link>
+          <Link to="/profile" className="flex-1">
+            <Button 
+              variant={isActive('/profile') ? 'default' : 'ghost'} 
+              className={`w-full flex flex-col items-center gap-1 h-auto py-2 ${isActive('/profile') ? 'text-cream bg-teal hover:bg-teal/90' : 'text-navy hover:text-teal hover:bg-mint/10'}`}
+              size="sm"
+            >
+              <User className="h-5 w-5" />
+              <span className="text-xs">Profile</span>
             </Button>
           </Link>
         </div>
