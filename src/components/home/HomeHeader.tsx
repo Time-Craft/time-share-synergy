@@ -23,7 +23,7 @@ const HomeHeader = () => {
   return (
     <div className="mb-8">
       <h1 className="text-4xl font-bold">
-        Welcome back, {profile?.username || 'Guest'}
+        Welcome to TimeCraft, {profile?.username || 'Guest'}
       </h1>
       <p className="text-muted-foreground mt-2">
         Here's what's happening with your time exchanges

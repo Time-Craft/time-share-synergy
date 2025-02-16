@@ -1,54 +1,37 @@
-
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { useState } from "react"
+import { Label } from "@/components/ui/label"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 const Login = () => {
+  const navigate = useNavigate()
+  const { toast } = useToast()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useToast()
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-      if (error) throw error
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error logging in",
-        description: error.message,
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    setIsSubmitting(true)
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
     try {
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: `${window.location.origin}/onboarding`,
         },
       })
+
       if (error) throw error
-      
+
       toast({
-        title: "Success!",
-        description: "Please check your email to verify your account.",
+        title: "Check your email",
+        description: "We've sent you a link to verify your email address.",
       })
     } catch (error: any) {
       toast({
@@ -57,81 +40,112 @@ const Login = () => {
         description: error.message,
       })
     } finally {
-      setIsLoading(false)
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (error) throw error
+
+      toast({
+        title: "Signed in successfully",
+        description: "You are now being redirected.",
+      })
+
+      navigate('/')
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error signing in",
+        description: error.message,
+      })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   return (
-    <div className="container mx-auto p-6 flex items-center justify-center min-h-screen bg-cream">
-      <Card className="w-full max-w-md gradient-border card-hover">
-        <CardHeader>
-          <CardTitle className="text-2xl text-center text-navy">TimeShare</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="login" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
+    <div className="container relative flex h-[100vh] flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
+      <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex">
+        <div className="absolute inset-0 z-0 bg-[url(/login-bg.png)] opacity-30" />
+        <div className="relative z-10 mt-auto">
+          <blockquote className="space-y-2">
+            <p className="text-lg">
+              &ldquo;This application has transformed the way I organize my
+              life. It's an essential tool I can't live without.&rdquo;
+            </p>
+            <footer className="text-sm">Sofia Davis</footer>
+          </blockquote>
+        </div>
+      </div>
+      <div className="lg:p-8">
+        <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
+          <div className="flex flex-col space-y-2 text-center">
+            <CardTitle className="text-2xl text-center text-navy">TimeCraft</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Enter your email below to create or sign in to your account
+            </p>
+          </div>
+          <Card className="border-0">
+            <CardHeader className="space-y-2">
+              <CardTitle>Authentication</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
                 <Input
+                  id="email"
+                  placeholder="name@example.com"
                   type="email"
-                  placeholder="Email"
+                  autoCapitalize="none"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="bg-cream border-mint/20 focus:border-teal"
+                  disabled={isSubmitting}
                 />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="password">Password</Label>
                 <Input
-                  type="password"
+                  id="password"
                   placeholder="Password"
+                  type="password"
+                  autoCapitalize="none"
+                  autoComplete="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="bg-cream border-mint/20 focus:border-teal"
+                  disabled={isSubmitting}
                 />
-                <Button 
-                  type="submit" 
-                  className="w-full bg-teal hover:bg-teal/90 text-cream"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Signing in..." : "Sign In"}
-                </Button>
-              </form>
-            </TabsContent>
-            
-            <TabsContent value="signup">
-              <form onSubmit={handleSignup} className="space-y-4">
-                <Input
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="bg-cream border-mint/20 focus:border-teal"
-                />
-                <Input
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="bg-cream border-mint/20 focus:border-teal"
-                />
-                <Button 
-                  type="submit" 
-                  className="w-full bg-teal hover:bg-teal/90 text-cream"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Creating account..." : "Create Account"}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+              </div>
+              <Button disabled={isSubmitting} onClick={handleSignIn}>
+                Sign In
+              </Button>
+            </CardContent>
+          </Card>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or continue with
+              </span>
+            </div>
+          </div>
+          <Button variant="secondary" disabled={isSubmitting} onClick={handleSignUp}>
+            Sign up
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }
