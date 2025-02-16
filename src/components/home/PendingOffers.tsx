@@ -35,9 +35,9 @@ const PendingOffers = () => {
   }
 
   return (
-    <Card>
+    <Card className="gradient-border card-hover">
       <CardHeader>
-        <CardTitle>Pending Offers</CardTitle>
+        <CardTitle className="text-navy">Pending Offers</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
