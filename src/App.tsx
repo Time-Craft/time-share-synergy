@@ -31,31 +31,14 @@ const App = () => {
   const [isNewUser, setIsNewUser] = useState(false)
 
   useEffect(() => {
-    // Initial session check
-    const initializeAuth = async () => {
-      try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession()
-        setSession(currentSession)
-
-        if (currentSession?.user) {
-          const { data } = await supabase
-            .from('profiles')
-            .select('username')
-            .eq('id', currentSession.user.id)
-            .single()
-          
-          setIsNewUser(!data?.username)
-        }
-      } catch (error) {
-        console.error('Error checking auth:', error)
-        // If there's an error, we clear the session to be safe
-        setSession(null)
-      } finally {
-        setIsLoading(false)
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession)
+      if (currentSession?.user) {
+        checkUserProfile(currentSession.user.id)
       }
-    }
-
-    initializeAuth()
+      setIsLoading(false)
+    })
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
@@ -63,20 +46,9 @@ const App = () => {
       setSession(newSession)
 
       if (event === 'SIGNED_IN' && newSession?.user) {
-        try {
-          const { data } = await supabase
-            .from('profiles')
-            .select('username')
-            .eq('id', newSession.user.id)
-            .single()
-          
-          setIsNewUser(!data?.username)
-        } catch (error) {
-          console.error('Error checking profile:', error)
-        }
+        await checkUserProfile(newSession.user.id)
       } else if (event === 'SIGNED_OUT') {
         setIsNewUser(false)
-        // Clear any cached data when signing out
         queryClient.clear()
       }
     })
@@ -86,11 +58,25 @@ const App = () => {
     }
   }, [])
 
-  // Handle loading state
+  const checkUserProfile = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', userId)
+        .single()
+      
+      setIsNewUser(!data?.username)
+    } catch (error) {
+      console.error('Error checking profile:', error)
+      setIsNewUser(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-cream">
-        <div className="text-navy">Loading...</div>
+        <div className="text-navy animate-pulse">Loading...</div>
       </div>
     )
   }

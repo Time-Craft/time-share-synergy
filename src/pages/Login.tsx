@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
@@ -37,7 +38,7 @@ const Login = () => {
       toast({
         variant: "destructive",
         title: "Error signing up",
-        description: error.message,
+        description: error.message
       })
     } finally {
       setIsSubmitting(false)
@@ -66,7 +67,7 @@ const Login = () => {
       toast({
         variant: "destructive",
         title: "Error signing in",
-        description: error.message,
+        description: error.message
       })
     } finally {
       setIsSubmitting(false)
@@ -126,24 +127,32 @@ const Login = () => {
                   disabled={isSubmitting}
                 />
               </div>
-              <Button disabled={isSubmitting} onClick={handleSignIn}>
-                Sign In
+              <Button 
+                onClick={handleSignIn} 
+                disabled={isSubmitting || !email || !password}
+                className="bg-teal hover:bg-teal/90 text-cream"
+              >
+                {isSubmitting ? "Signing in..." : "Sign In"}
+              </Button>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={handleSignUp}
+                disabled={isSubmitting || !email || !password}
+              >
+                {isSubmitting ? "Creating account..." : "Create Account"}
               </Button>
             </CardContent>
           </Card>
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Or continue with
-              </span>
-            </div>
-          </div>
-          <Button variant="secondary" disabled={isSubmitting} onClick={handleSignUp}>
-            Sign up
-          </Button>
         </div>
       </div>
     </div>
