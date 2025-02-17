@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, Suspense } from "react"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as Sonner } from "@/components/ui/sonner"
@@ -38,26 +39,30 @@ const App = () => {
   const [session, setSession] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isNewUser, setIsNewUser] = useState(false)
+  const [authInitialized, setAuthInitialized] = useState(false)
 
   useEffect(() => {
     let mounted = true
 
     const initSession = async () => {
+      if (!mounted || authInitialized) return
+
       try {
         const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
         
         if (sessionError) {
           console.error('Session error:', sessionError)
-          await supabase.auth.signOut()
           if (mounted) {
             setSession(null)
             setIsLoading(false)
+            setAuthInitialized(true)
           }
           return
         }
 
         if (mounted) {
           setSession(currentSession)
+          setAuthInitialized(true)
           
           if (currentSession?.user) {
             await checkUserProfile(currentSession.user.id)
@@ -68,6 +73,7 @@ const App = () => {
         if (mounted) {
           setSession(null)
           setIsLoading(false)
+          setAuthInitialized(true)
         }
       } finally {
         if (mounted) {
@@ -81,40 +87,60 @@ const App = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       console.log('Auth state changed:', event)
       
-      if (mounted) {
-        if (event === 'SIGNED_OUT') {
+      if (!mounted) return
+
+      switch (event) {
+        case 'SIGNED_OUT':
           setSession(null)
           setIsNewUser(false)
           queryClient.clear()
-          return
-        }
+          break
 
-        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && newSession) {
+        case 'SIGNED_IN':
+        case 'TOKEN_REFRESHED':
+          // Prevent duplicate state updates if session hasn't changed
+          if (session?.user?.id === newSession?.user?.id) return
+          
           setSession(newSession)
-          try {
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('username')
-              .eq('id', newSession.user.id)
-              .single()
-
-            if (profileError) throw profileError
-
-            if (!profile) {
-              const { error: insertError } = await supabase
+          if (newSession?.user) {
+            try {
+              const { data: profile, error: profileError } = await supabase
                 .from('profiles')
-                .insert([{ id: newSession.user.id }])
-              
-              if (insertError) throw insertError
-              setIsNewUser(true)
-            } else {
-              setIsNewUser(!profile.username)
+                .select('username')
+                .eq('id', newSession.user.id)
+                .single()
+
+              if (profileError) throw profileError
+
+              if (!profile) {
+                const { error: insertError } = await supabase
+                  .from('profiles')
+                  .insert([{ id: newSession.user.id }])
+                
+                if (insertError) throw insertError
+                setIsNewUser(true)
+              } else {
+                setIsNewUser(!profile.username)
+              }
+            } catch (error) {
+              console.error('Profile check error:', error)
+              setIsNewUser(false)
             }
-          } catch (error) {
-            console.error('Profile check error:', error)
-            setIsNewUser(false)
           }
-        }
+          break
+
+        case 'INITIAL_SESSION':
+          // Only handle if we haven't initialized auth yet
+          if (!authInitialized) {
+            setAuthInitialized(true)
+            if (newSession) {
+              setSession(newSession)
+              if (newSession.user) {
+                await checkUserProfile(newSession.user.id)
+              }
+            }
+          }
+          break
       }
     })
 
@@ -122,7 +148,7 @@ const App = () => {
       mounted = false
       subscription.unsubscribe()
     }
-  }, [])
+  }, [session?.user?.id, authInitialized])
 
   const checkUserProfile = async (userId: string) => {
     try {
