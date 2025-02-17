@@ -8,8 +8,6 @@ interface OfferInput {
   description: string
   hours: number
   serviceType: string
-  date?: string
-  duration: number
 }
 
 export const useOfferManagement = () => {
@@ -27,9 +25,7 @@ export const useOfferManagement = () => {
           title: offer.title,
           description: offer.description,
           hours: offer.hours,
-          service_type: offer.serviceType,
-          date: offer.date,
-          duration: offer.duration,
+          service_type: offer.serviceType, // Changed from serviceType to service_type
           status: 'available',
           profile_id: user.id,
           created_at: new Date().toISOString()
@@ -64,9 +60,7 @@ export const useOfferManagement = () => {
           title: offer.title,
           description: offer.description,
           hours: offer.hours,
-          service_type: offer.serviceType,
-          date: offer.date,
-          duration: offer.duration,
+          service_type: offer.serviceType, // Changed from serviceType to service_type
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
