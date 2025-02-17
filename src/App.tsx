@@ -44,12 +44,10 @@ const App = () => {
 
     const initSession = async () => {
       try {
-        // First, try to get the session
         const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
         
         if (sessionError) {
           console.error('Session error:', sessionError)
-          // If there's an error getting the session, clear it
           await supabase.auth.signOut()
           if (mounted) {
             setSession(null)
@@ -67,7 +65,6 @@ const App = () => {
         }
       } catch (error) {
         console.error('Session init error:', error)
-        // On any error, ensure we're in a clean state
         if (mounted) {
           setSession(null)
           setIsLoading(false)
@@ -81,12 +78,11 @@ const App = () => {
 
     initSession()
 
-    // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       console.log('Auth state changed:', event)
       
       if (mounted) {
-        if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        if (event === 'SIGNED_OUT') {
           setSession(null)
           setIsNewUser(false)
           queryClient.clear()
