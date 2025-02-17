@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, Suspense } from "react"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as Sonner } from "@/components/ui/sonner"
@@ -18,19 +17,17 @@ const Onboarding = React.lazy(() => import("./pages/Onboarding"))
 const Challenges = React.lazy(() => import("./pages/Challenges"))
 const NotFound = React.lazy(() => import("./pages/NotFound"))
 
-// Optimize React Query configuration
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
-      gcTime: 1000 * 60 * 30, // Keep unused data in cache for 30 minutes
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 30,
     },
   },
 })
 
-// Loading component for Suspense
 const LoadingFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-cream">
     <div className="text-navy animate-pulse">Loading...</div>
@@ -47,7 +44,20 @@ const App = () => {
 
     const initSession = async () => {
       try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession()
+        // First, try to get the session
+        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError)
+          // If there's an error getting the session, clear it
+          await supabase.auth.signOut()
+          if (mounted) {
+            setSession(null)
+            setIsLoading(false)
+          }
+          return
+        }
+
         if (mounted) {
           setSession(currentSession)
           
@@ -57,6 +67,11 @@ const App = () => {
         }
       } catch (error) {
         console.error('Session init error:', error)
+        // On any error, ensure we're in a clean state
+        if (mounted) {
+          setSession(null)
+          setIsLoading(false)
+        }
       } finally {
         if (mounted) {
           setIsLoading(false)
@@ -66,17 +81,28 @@ const App = () => {
 
     initSession()
 
+    // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      console.log('Auth state changed:', event)
+      
       if (mounted) {
-        setSession(newSession)
+        if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+          setSession(null)
+          setIsNewUser(false)
+          queryClient.clear()
+          return
+        }
 
-        if (event === 'SIGNED_IN' && newSession?.user) {
+        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && newSession) {
+          setSession(newSession)
           try {
-            const { data: profile } = await supabase
+            const { data: profile, error: profileError } = await supabase
               .from('profiles')
               .select('username')
               .eq('id', newSession.user.id)
               .single()
+
+            if (profileError) throw profileError
 
             if (!profile) {
               const { error: insertError } = await supabase
@@ -92,9 +118,6 @@ const App = () => {
             console.error('Profile check error:', error)
             setIsNewUser(false)
           }
-        } else if (event === 'SIGNED_OUT') {
-          setIsNewUser(false)
-          queryClient.clear()
         }
       }
     })
