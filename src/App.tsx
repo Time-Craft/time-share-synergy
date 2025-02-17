@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState, Suspense } from "react"
+import React, { useEffect, useState, Suspense, useCallback } from "react"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as Sonner } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -41,6 +40,72 @@ const App = () => {
   const [isNewUser, setIsNewUser] = useState(false)
   const [authInitialized, setAuthInitialized] = useState(false)
 
+  const checkUserProfile = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', userId)
+        .maybeSingle()
+      
+      if (error) throw error
+      
+      if (!data) {
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert([{ id: userId }])
+        
+        if (insertError) throw insertError
+        setIsNewUser(true)
+      } else {
+        setIsNewUser(!data.username)
+      }
+    } catch (error) {
+      console.error('Error checking profile:', error)
+      setIsNewUser(false)
+    }
+  }, [])
+
+  const handleAuthChange = useCallback(async (event: string, newSession: any) => {
+    console.log('Auth state changed:', event)
+
+    switch (event) {
+      case 'SIGNED_OUT':
+      case 'USER_UPDATED':
+        setSession(null)
+        setIsNewUser(false)
+        queryClient.clear()
+        break
+
+      case 'SIGNED_IN':
+      case 'TOKEN_REFRESHED':
+        // Only update if the session has actually changed
+        if (newSession?.user?.id !== session?.user?.id) {
+          setSession(newSession)
+          if (newSession?.user) {
+            await checkUserProfile(newSession.user.id)
+          }
+        }
+        break
+
+      case 'PASSWORD_RECOVERY':
+        // Handle password recovery if needed
+        break
+
+      case 'INITIAL_SESSION':
+        if (!authInitialized) {
+          setAuthInitialized(true)
+          if (newSession) {
+            setSession(newSession)
+            if (newSession.user) {
+              await checkUserProfile(newSession.user.id)
+            }
+          }
+        }
+        break
+    }
+  }, [authInitialized, session?.user?.id, checkUserProfile])
+
   useEffect(() => {
     let mounted = true
 
@@ -61,8 +126,8 @@ const App = () => {
         }
 
         if (mounted) {
-          setSession(currentSession)
           setAuthInitialized(true)
+          setSession(currentSession)
           
           if (currentSession?.user) {
             await checkUserProfile(currentSession.user.id)
@@ -84,87 +149,13 @@ const App = () => {
 
     initSession()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      console.log('Auth state changed:', event)
-      
-      if (!mounted) return
-
-      switch (event) {
-        case 'SIGNED_OUT':
-          setSession(null)
-          setIsNewUser(false)
-          queryClient.clear()
-          break
-
-        case 'SIGNED_IN':
-        case 'TOKEN_REFRESHED':
-          // Prevent duplicate state updates if session hasn't changed
-          if (session?.user?.id === newSession?.user?.id) return
-          
-          setSession(newSession)
-          if (newSession?.user) {
-            try {
-              const { data: profile, error: profileError } = await supabase
-                .from('profiles')
-                .select('username')
-                .eq('id', newSession.user.id)
-                .single()
-
-              if (profileError) throw profileError
-
-              if (!profile) {
-                const { error: insertError } = await supabase
-                  .from('profiles')
-                  .insert([{ id: newSession.user.id }])
-                
-                if (insertError) throw insertError
-                setIsNewUser(true)
-              } else {
-                setIsNewUser(!profile.username)
-              }
-            } catch (error) {
-              console.error('Profile check error:', error)
-              setIsNewUser(false)
-            }
-          }
-          break
-
-        case 'INITIAL_SESSION':
-          // Only handle if we haven't initialized auth yet
-          if (!authInitialized) {
-            setAuthInitialized(true)
-            if (newSession) {
-              setSession(newSession)
-              if (newSession.user) {
-                await checkUserProfile(newSession.user.id)
-              }
-            }
-          }
-          break
-      }
-    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange)
 
     return () => {
       mounted = false
       subscription.unsubscribe()
     }
-  }, [session?.user?.id, authInitialized])
-
-  const checkUserProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('id', userId)
-        .single()
-      
-      if (error) throw error
-      setIsNewUser(!data?.username)
-    } catch (error) {
-      console.error('Error checking profile:', error)
-      setIsNewUser(false)
-    }
-  }
+  }, [authInitialized, handleAuthChange, checkUserProfile])
 
   if (isLoading) {
     return <LoadingFallback />
