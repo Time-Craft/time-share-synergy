@@ -26,7 +26,11 @@ export const useExploreOffers = () => {
       const query = supabase
         .from('offers')
         .select(`
-          *,
+          id,
+          title,
+          description,
+          hours,
+          status,
           profiles!offers_profile_id_fkey (
             id,
             username,
@@ -54,7 +58,9 @@ export const useExploreOffers = () => {
           avatar: offer.profiles?.avatar_url || '/placeholder.svg'
         }
       })) as Offer[]
-    }
+    },
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
+    cacheTime: 1000 * 60 * 30, // Keep unused data in cache for 30 minutes
   })
 
   const acceptOffer = useMutation({
