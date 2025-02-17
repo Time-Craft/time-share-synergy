@@ -81,35 +81,41 @@ export type Database = {
       offers: {
         Row: {
           created_at: string
+          date: string | null
           description: string | null
+          duration: number | null
           hours: number
           id: string
           profile_id: string
           service_type: string
           status: string | null
-          title: string
+          title: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          date?: string | null
           description?: string | null
+          duration?: number | null
           hours: number
           id?: string
           profile_id: string
           service_type: string
           status?: string | null
-          title: string
+          title?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          date?: string | null
           description?: string | null
+          duration?: number | null
           hours?: number
           id?: string
           profile_id?: string
           service_type?: string
           status?: string | null
-          title?: string
+          title?: string | null
           updated_at?: string
         }
         Relationships: [
