@@ -1,7 +1,8 @@
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
+import { useToast } from '@/components/ui/use-toast'
 
 interface Offer {
   id: string
@@ -18,6 +19,7 @@ interface Offer {
 
 export const useExploreOffers = () => {
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
 
   const { data: offers, isLoading } = useQuery({
@@ -59,9 +61,28 @@ export const useExploreOffers = () => {
         }
       })) as Offer[]
     },
-    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
-    gcTime: 1000 * 60 * 30, // Keep unused data in cache for 30 minutes
   })
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('offers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'offers'
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['offers'] })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [queryClient])
 
   const acceptOffer = useMutation({
     mutationFn: async (offerId: string) => {
@@ -73,7 +94,17 @@ export const useExploreOffers = () => {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['offers'] })
+      toast({
+        title: "Success",
+        description: "Offer accepted successfully",
+      })
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to accept offer: ${error.message}`,
+      })
     }
   })
 

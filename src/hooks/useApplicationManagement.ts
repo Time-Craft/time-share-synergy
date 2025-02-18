@@ -2,10 +2,44 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
+import { useEffect } from 'react'
 
 export const useApplicationManagement = (offerId?: string) => {
   const queryClient = useQueryClient()
   const { toast } = useToast()
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('application-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'offer_applications'
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['offer-applications'] })
+          queryClient.invalidateQueries({ queryKey: ['user-application'] })
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles'
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['profile'] })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [queryClient])
 
   const { data: applications, isLoading: isLoadingApplications } = useQuery({
     queryKey: ['offer-applications', offerId],
@@ -65,8 +99,6 @@ export const useApplicationManagement = (offerId?: string) => {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['offer-applications'] })
-      queryClient.invalidateQueries({ queryKey: ['user-application'] })
       toast({
         title: "Success",
         description: "Application submitted successfully",
@@ -83,7 +115,6 @@ export const useApplicationManagement = (offerId?: string) => {
 
   const updateApplicationStatus = useMutation({
     mutationFn: async ({ applicationId, status }: { applicationId: string, status: 'accepted' | 'rejected' }) => {
-      // First update the application status
       const { error: applicationError } = await supabase
         .from('offer_applications')
         .update({ 
@@ -94,7 +125,6 @@ export const useApplicationManagement = (offerId?: string) => {
       
       if (applicationError) throw applicationError
 
-      // If accepted, update the offer status to booked
       if (status === 'accepted') {
         const { data: application } = await supabase
           .from('offer_applications')
@@ -113,9 +143,6 @@ export const useApplicationManagement = (offerId?: string) => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['offer-applications'] })
-      queryClient.invalidateQueries({ queryKey: ['offers'] })
-      queryClient.invalidateQueries({ queryKey: ['user-application'] })
       toast({
         title: "Success",
         description: "Application status updated successfully",

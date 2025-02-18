@@ -2,6 +2,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
+import { useEffect } from 'react'
 
 interface OfferInput {
   title: string
@@ -15,6 +16,27 @@ interface OfferInput {
 export const useOfferManagement = () => {
   const queryClient = useQueryClient()
   const { toast } = useToast()
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('offer-management')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'offers'
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['offers'] })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [queryClient])
 
   const createOffer = useMutation({
     mutationFn: async (offer: OfferInput) => {
@@ -38,7 +60,6 @@ export const useOfferManagement = () => {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['offers'] })
       toast({
         title: "Success",
         description: "Offer created successfully",
@@ -64,7 +85,7 @@ export const useOfferManagement = () => {
           title: offer.title,
           description: offer.description,
           hours: offer.hours,
-          service_type: offer.serviceType, // Changed from serviceType to service_type
+          service_type: offer.serviceType,
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
@@ -73,7 +94,6 @@ export const useOfferManagement = () => {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['offers'] })
       toast({
         title: "Success",
         description: "Offer updated successfully",
@@ -102,11 +122,11 @@ export const useOfferManagement = () => {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['offers'] })
       toast({
         title: "Success",
         description: "Offer deleted successfully",
       })
+      queryClient.invalidateQueries({ queryKey: ['offers'] })
     },
     onError: (error) => {
       toast({
