@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -126,23 +127,6 @@ const Profile = () => {
     enabled: !!userId
   })
 
-  const { data: timeBalance, isLoading: timeBalanceLoading } = useQuery({
-    queryKey: ['time-balance', userId],
-    queryFn: async () => {
-      if (!userId) return 0
-
-      const { data, error } = await supabase
-        .from('time_balances')
-        .select('balance')
-        .eq('user_id', userId)
-        .maybeSingle()
-
-      if (error) throw error
-      return data?.balance || 0
-    },
-    enabled: !!userId
-  })
-
   const { data: userOffers, isLoading: userOffersLoading } = useQuery({
     queryKey: ['user-offers', userId],
     queryFn: async () => {
@@ -220,11 +204,11 @@ const Profile = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl md:text-4xl font-bold">Profile</h1>
         <div className="flex items-center gap-4">
-          {timeBalanceLoading ? (
+          {userOffersLoading ? (
             <Skeleton className="h-6 w-24" />
           ) : (
             <div className="text-sm font-medium">
-              <span className="text-teal">{timeBalance}</span> credits available
+              <span className="text-teal">{calculateTimeBalance()}</span> credits available
             </div>
           )}
           <Button variant="outline" onClick={handleLogout}>
@@ -296,7 +280,7 @@ const Profile = () => {
               <Button 
                 size="sm" 
                 onClick={() => navigate('/offer')}
-                disabled={userOffersLoading}
+                disabled={userOffersLoading || calculateTimeBalance() <= 0}
               >
                 <Plus className="h-4 w-4 mr-1" />
                 New Request

@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
@@ -48,6 +47,38 @@ export const useCompleteOffer = () => {
       
       if (updateError) throw updateError
       
+      // Check if provider already has a time balance
+      const { data: currentBalance, error: balanceReadError } = await supabase
+        .from('time_balances')
+        .select('balance')
+        .eq('user_id', acceptedApplication.applicant_id)
+        .maybeSingle()
+      
+      // If no balance entry exists yet, create one with the earned credits
+      if (!currentBalance) {
+        const { error: createBalanceError } = await supabase
+          .from('time_balances')
+          .insert({ 
+            user_id: acceptedApplication.applicant_id,
+            balance: offer.time_credits || 1
+          })
+        
+        if (createBalanceError) throw createBalanceError
+      } else {
+        // Otherwise update the existing balance
+        const newBalance = currentBalance.balance + (offer.time_credits || 1)
+        
+        const { error: balanceError } = await supabase
+          .from('time_balances')
+          .update({ 
+            balance: newBalance,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', acceptedApplication.applicant_id)
+        
+        if (balanceError) throw balanceError
+      }
+      
       // Create a transaction record
       const { error: transactionError } = await supabase
         .from('transactions')
@@ -70,7 +101,7 @@ export const useCompleteOffer = () => {
     onSuccess: (result) => {
       toast({
         title: "Success",
-        description: `Offer marked as completed. ${result.credits} credits transferred.`,
+        description: `Offer marked as completed and ${result.credits} credits transferred`,
       })
       
       // Invalidate all relevant queries to update the UI
@@ -83,11 +114,7 @@ export const useCompleteOffer = () => {
     },
     onError: (error) => {
       console.error("Error completing offer:", error)
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: `Failed to complete offer: ${error.message}`
-      })
+      // We're removing the error toast as requested
     }
   })
 
