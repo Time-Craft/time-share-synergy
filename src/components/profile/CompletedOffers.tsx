@@ -98,7 +98,7 @@ const CompletedOffers = ({ userId, username, avatar }: CompletedOffersProps) => 
       // For each transaction, get the offer details
       const completedOffers = []
       
-      for (const transaction of data) {
+      for (const transaction of data || []) {
         // Get offer details
         const { data: offerData, error: offerError } = await supabase
           .from('offers')
@@ -171,7 +171,7 @@ const CompletedOffers = ({ userId, username, avatar }: CompletedOffersProps) => 
       // For each transaction, get the offer details
       const completedOffers = []
       
-      for (const transaction of data) {
+      for (const transaction of data || []) {
         // Get offer details
         const { data: offerData, error: offerError } = await supabase
           .from('offers')
