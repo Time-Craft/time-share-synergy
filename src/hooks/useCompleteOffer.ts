@@ -55,6 +55,8 @@ export const useCompleteOffer = () => {
         .eq('user_id', acceptedApplication.applicant_id)
         .maybeSingle()
       
+      if (balanceReadError) throw balanceReadError
+      
       // If no balance entry exists yet, create one with the earned credits
       if (!currentBalance) {
         const { error: createBalanceError } = await supabase
