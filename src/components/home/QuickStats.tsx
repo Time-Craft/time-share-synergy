@@ -90,25 +90,6 @@ const QuickStats = () => {
     enabled: !!userId // Only run query when userId is available
   })
 
-  // Get time balance from the database
-  const { data: timeBalance, isLoading: timeBalanceLoading } = useQuery({
-    queryKey: ['time-balance', userId],
-    queryFn: async () => {
-      if (!userId) return 0
-
-      const { data, error } = await supabase
-        .from('time_balances')
-        .select('balance')
-        .eq('user_id', userId)
-        .maybeSingle()
-
-      if (error) throw error
-      // Return the balance value directly, not the object
-      return data?.balance || 0
-    },
-    enabled: !!userId
-  })
-
   // Get user's offers to calculate credits used
   const { data: userOffers, isLoading: userOffersLoading } = useQuery({
     queryKey: ['user-offers', userId],
@@ -151,10 +132,10 @@ const QuickStats = () => {
         <CardContent>
           <div className="flex items-center justify-between">
             <div className="text-2xl font-bold text-navy">
-              {userOffersLoading || timeBalanceLoading ? (
+              {userOffersLoading ? (
                 <Skeleton className="h-8 w-20" />
               ) : (
-                `${timeBalance} credits`
+                `${calculateTimeBalance()} credits`
               )}
             </div>
             <Badge variant="outline" className="bg-teal/10 text-teal">Available</Badge>

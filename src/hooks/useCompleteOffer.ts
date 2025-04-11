@@ -57,7 +57,7 @@ export const useCompleteOffer = () => {
           user_id: user.id,  // Requester
           provider_id: acceptedApplication.applicant_id,  // Service provider
           offer_id: offerId,
-          claimed: false  // Start as unclaimed
+          claimed: false  // New field: start as unclaimed
         })
         .select()
       
