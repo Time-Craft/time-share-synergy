@@ -49,31 +49,28 @@ export const useCompleteOffer = () => {
       if (updateError) throw updateError
       
       // Create a transaction record
-      const { error: transactionError, data: transactionData } = await supabase
+      const { error: transactionError } = await supabase
         .from('transactions')
         .insert({
           service: offer.service_type || 'Time Exchange',
           hours: offer.time_credits || 1,
           user_id: user.id,  // Requester
           provider_id: acceptedApplication.applicant_id,  // Service provider
-          offer_id: offerId,
-          claimed: false  // New field: start as unclaimed
+          offer_id: offerId
         })
-        .select()
       
       if (transactionError) throw transactionError
 
       return {
         success: true,
         providerId: acceptedApplication.applicant_id,
-        credits: offer.time_credits || 1,
-        transactionId: transactionData?.[0]?.id
+        credits: offer.time_credits || 1
       }
     },
     onSuccess: (result) => {
       toast({
         title: "Success",
-        description: `Offer marked as completed. Provider can now claim ${result.credits} credits.`,
+        description: `Offer marked as completed. ${result.credits} credits transferred.`,
       })
       
       // Invalidate all relevant queries to update the UI

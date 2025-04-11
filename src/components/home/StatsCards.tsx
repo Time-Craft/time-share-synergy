@@ -84,7 +84,7 @@ const StatsCards = () => {
   })
 
   // Get time balance from the time_balances table
-  const { data: timeBalance, isLoading: timeBalanceLoading } = useQuery({
+  const { data: timeBalanceData, isLoading: timeBalanceLoading } = useQuery({
     queryKey: ['time-balance', userId],
     queryFn: async () => {
       if (!userId) return null
@@ -97,7 +97,7 @@ const StatsCards = () => {
 
       if (error) throw error
       
-      return data
+      return data?.balance || 0
     },
     enabled: !!userId // Only run query when userId is available
   })
