@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
@@ -114,7 +115,11 @@ export const useCompleteOffer = () => {
     },
     onError: (error) => {
       console.error("Error completing offer:", error)
-      // We're removing the error toast as requested
+      toast({
+        title: "Error",
+        description: `Failed to complete offer: ${error.message}`,
+        variant: "destructive",
+      })
     }
   })
 
