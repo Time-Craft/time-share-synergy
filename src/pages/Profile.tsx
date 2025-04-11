@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -138,6 +139,7 @@ const Profile = () => {
         .maybeSingle()
 
       if (error) throw error
+      // Return the balance value directly, not the object
       return data?.balance || 0
     },
     enabled: !!userId

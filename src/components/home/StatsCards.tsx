@@ -97,7 +97,8 @@ const StatsCards = () => {
 
       if (error) throw error
       
-      return data
+      // Return the balance value directly, not the object
+      return data?.balance || 0
     },
     enabled: !!userId // Only run query when userId is available
   })
