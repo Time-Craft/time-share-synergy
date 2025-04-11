@@ -9,12 +9,15 @@ interface Offer {
   title: string
   description: string
   hours: number
+  timeCredits?: number
+  service_type: string 
   user: {
     id: string
     name: string
     avatar: string
   }
   status: string
+  accepted_by?: string[] 
 }
 
 export const useExploreOffers = () => {
@@ -22,6 +25,7 @@ export const useExploreOffers = () => {
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
 
+  // Enhanced query with real-time invalidation
   const { data: offers, isLoading } = useQuery({
     queryKey: ['offers', searchQuery],
     queryFn: async () => {
@@ -32,7 +36,9 @@ export const useExploreOffers = () => {
           title,
           description,
           hours,
+          time_credits,
           status,
+          service_type,
           profiles!offers_profile_id_fkey (
             id,
             username,
@@ -48,12 +54,18 @@ export const useExploreOffers = () => {
       const { data, error } = await query
       if (error) throw error
 
+      // Debug log to verify time_credits is coming from the database
+      console.log('Offers from database:', data)
+
       return data.map(offer => ({
         id: offer.id,
         title: offer.title,
         description: offer.description,
         hours: offer.hours,
+        timeCredits: offer.time_credits,
         status: offer.status,
+        service_type: offer.service_type || offer.status,
+        accepted_by: [],
         user: {
           id: offer.profiles?.id || '',
           name: offer.profiles?.username || 'Unknown User',
@@ -63,6 +75,7 @@ export const useExploreOffers = () => {
     },
   })
 
+  // Real-time subscription setup
   useEffect(() => {
     const channel = supabase
       .channel('offers-changes')
@@ -73,7 +86,8 @@ export const useExploreOffers = () => {
           schema: 'public',
           table: 'offers'
         },
-        () => {
+        (payload) => {
+          console.log('Real-time update received:', payload)
           queryClient.invalidateQueries({ queryKey: ['offers'] })
         }
       )
@@ -92,6 +106,9 @@ export const useExploreOffers = () => {
         .eq('id', offerId)
       
       if (error) throw error
+
+      // Immediately invalidate queries to trigger a refresh
+      queryClient.invalidateQueries({ queryKey: ['offers'] })
     },
     onSuccess: () => {
       toast({
@@ -99,7 +116,7 @@ export const useExploreOffers = () => {
         description: "Offer accepted successfully",
       })
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Error",

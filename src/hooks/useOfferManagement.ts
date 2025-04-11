@@ -1,148 +1,38 @@
 
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/integrations/supabase/client'
-import { useToast } from '@/components/ui/use-toast'
-import { useEffect } from 'react'
+import { useCreateOffer } from './useCreateOffer'
+import { useUpdateOffer } from './useUpdateOffer'
+import { useDeleteOffer } from './useDeleteOffer'
+import { useOfferSubscription } from './useOfferSubscription'
+import { useCompleteOffer } from './useCompleteOffer'
 
-interface OfferInput {
+export interface OfferInput {
   title: string
   description: string
   hours: number
   serviceType: string
   date?: string
   duration: number
+  timeCredits: number 
 }
 
 export const useOfferManagement = () => {
-  const queryClient = useQueryClient()
-  const { toast } = useToast()
+  // Set up subscriptions for real-time updates
+  useOfferSubscription()
 
-  useEffect(() => {
-    const channel = supabase
-      .channel('offer-management')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'offers'
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['offers'] })
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [queryClient])
-
-  const createOffer = useMutation({
-    mutationFn: async (offer: OfferInput) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
-
-      const { error } = await supabase
-        .from('offers')
-        .insert([{ 
-          title: offer.title,
-          description: offer.description,
-          hours: offer.hours,
-          service_type: offer.serviceType,
-          date: offer.date,
-          duration: offer.duration,
-          status: 'available',
-          profile_id: user.id,
-          created_at: new Date().toISOString()
-        }])
-      
-      if (error) throw error
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Offer created successfully",
-      })
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to create offer: " + error.message,
-        variant: "destructive",
-      })
-    }
-  })
-
-  const updateOffer = useMutation({
-    mutationFn: async ({ id, ...offer }: OfferInput & { id: string }) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
-
-      const { error } = await supabase
-        .from('offers')
-        .update({ 
-          title: offer.title,
-          description: offer.description,
-          hours: offer.hours,
-          service_type: offer.serviceType,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .eq('profile_id', user.id)
-      
-      if (error) throw error
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Offer updated successfully",
-      })
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to update offer: " + error.message,
-        variant: "destructive",
-      })
-    }
-  })
-
-  const deleteOffer = useMutation({
-    mutationFn: async (offerId: string) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
-
-      const { error } = await supabase
-        .from('offers')
-        .delete()
-        .eq('id', offerId)
-        .eq('profile_id', user.id)
-      
-      if (error) throw error
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Offer deleted successfully",
-      })
-      queryClient.invalidateQueries({ queryKey: ['offers'] })
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to delete offer: " + error.message,
-        variant: "destructive",
-      })
-    }
-  })
+  // Get all the individual hooks
+  const { createOffer, isCreating } = useCreateOffer()
+  const { updateOffer, isUpdating } = useUpdateOffer()
+  const { deleteOffer, isDeleting } = useDeleteOffer()
+  const { completeOffer, isCompleting } = useCompleteOffer()
 
   return {
-    createOffer: createOffer.mutate,
-    updateOffer: updateOffer.mutate,
-    deleteOffer: deleteOffer.mutate,
-    isCreating: createOffer.isPending,
-    isUpdating: updateOffer.isPending,
-    isDeleting: deleteOffer.isPending
+    createOffer,
+    updateOffer,
+    deleteOffer,
+    completeOffer,
+    isCreating,
+    isUpdating,
+    isDeleting,
+    isCompleting
   }
 }

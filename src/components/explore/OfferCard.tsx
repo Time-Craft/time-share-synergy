@@ -1,38 +1,49 @@
 
 import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import OfferHeader from "./OfferHeader"
 import OfferStatus from "./OfferStatus"
-import { Check, Hourglass, X, Trash2 } from "lucide-react"
 import { useApplicationManagement } from "@/hooks/useApplicationManagement"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
+import { useDeleteOffer } from "@/hooks/useDeleteOffer"
+import { useCompleteOffer } from "@/hooks/useCompleteOffer"
+import OfferApplyButton from "./OfferApplyButton"
+import OfferOwnerActions from "./OfferOwnerActions"
+import ApplicationsList from "./ApplicationsList"
 
 interface OfferCardProps {
   offer: {
     id: string
     title: string
     description: string
-    hours: number
+    hours?: number
+    timeCredits?: number
     user: {
       id: string
       name: string
       avatar: string
     }
     status: string
+    service_type?: string
+    accepted_by?: string[]
+    isApplied?: boolean
+    applicationStatus?: string
   }
   showApplications?: boolean
-  onDelete?: () => void
 }
 
-const OfferCard = ({ offer, showApplications = false, onDelete }: OfferCardProps) => {
+const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
   const { toast } = useToast()
+  const { deleteOffer, isDeleting } = useDeleteOffer()
+  const { completeOffer, isCompleting } = useCompleteOffer()
   const { 
     applyToOffer, 
     applications, 
     updateApplicationStatus,
-    userApplication 
+    userApplication,
+    isApplying,
+    isUpdating
   } = useApplicationManagement(offer.id)
 
   const { data: currentUser } = useQuery({
@@ -48,22 +59,11 @@ const OfferCard = ({ offer, showApplications = false, onDelete }: OfferCardProps
 
   const handleDelete = async () => {
     try {
-      const { error } = await supabase
-        .from('offers')
-        .delete()
-        .eq('id', offer.id)
-        .eq('profile_id', currentUser?.id)
-
-      if (error) throw error
-
+      await deleteOffer(offer.id)
       toast({
         title: "Success",
         description: "Offer deleted successfully",
       })
-
-      if (onDelete) {
-        onDelete()
-      }
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -73,99 +73,83 @@ const OfferCard = ({ offer, showApplications = false, onDelete }: OfferCardProps
     }
   }
 
-  const renderApplyButton = () => {
-    if (userApplication) {
-      return (
-        <Button 
-          disabled 
-          variant="secondary"
-          className="w-full md:w-auto mt-4 md:mt-0"
-        >
-          <Hourglass className="h-4 w-4 mr-1" />
-          {userApplication.status === 'pending' ? 'Application Pending' : 
-            userApplication.status === 'accepted' ? 'Application Accepted' : 
-            'Application Rejected'}
-        </Button>
-      )
+  const handleComplete = async () => {
+    try {
+      await completeOffer(offer.id)
+      toast({
+        title: "Success",
+        description: "Offer marked as completed and credits transferred",
+      })
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to complete offer: ${error.message}`,
+      })
     }
-
-    return (
-      <Button 
-        onClick={() => applyToOffer(offer.id)}
-        disabled={offer.status !== 'available'}
-        className="w-full md:w-auto mt-4 md:mt-0 bg-teal hover:bg-teal/90 text-cream"
-      >
-        <Check className="h-4 w-4 mr-1" />
-        {offer.status === 'available' ? 'Apply' : 'Not Available'}
-      </Button>
-    )
   }
+
+  const handleUpdateStatus = async (applicationId: string, status: 'accepted' | 'rejected') => {
+    try {
+      await updateApplicationStatus({ 
+        applicationId, 
+        status 
+      })
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to ${status} application: ${error.message}`,
+      })
+    }
+  }
+
+  // Check if this offer has any accepted applications
+  const hasAcceptedApplication = applications?.some(app => app.status === 'accepted')
 
   return (
     <Card className="gradient-border card-hover">
       <CardContent className="p-6">
-        <OfferHeader user={offer.user} title={offer.title} hours={offer.hours} />
+        <OfferHeader 
+          user={offer.user} 
+          title={offer.title} 
+          hours={offer.hours}
+          timeCredits={offer.timeCredits} 
+        />
         <p className="mt-2 text-navy/80">{offer.description}</p>
         <div className="mt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <OfferStatus status={offer.status} />
+          <OfferStatus status={offer.status || 'unknown'} />
           <div className="flex flex-col md:flex-row gap-2 md:items-center">
-            {isOwner && (
-              <Button
-                onClick={handleDelete}
-                variant="destructive"
-                size="icon"
-                className="w-full md:w-auto"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+            {isOwner ? (
+              <OfferOwnerActions 
+                offerId={offer.id}
+                status={offer.status}
+                hasAcceptedApplication={hasAcceptedApplication}
+                onDelete={handleDelete}
+                onComplete={handleComplete}
+                isDeleting={isDeleting}
+                isCompleting={isCompleting}
+              />
+            ) : (
+              <OfferApplyButton
+                offerId={offer.id}
+                status={offer.status}
+                isApplied={offer.isApplied}
+                applicationStatus={offer.applicationStatus}
+                userApplication={userApplication}
+                onApply={applyToOffer}
+                isApplying={isApplying}
+              />
             )}
-            {!isOwner && renderApplyButton()}
           </div>
         </div>
 
-        {showApplications && applications && applications.length > 0 && (
-          <div className="mt-4 border-t border-mint/20 pt-4">
-            <h4 className="font-semibold mb-2 text-navy">Applications</h4>
-            <div className="space-y-2">
-              {applications.map((application: any) => (
-                <div key={application.id} className="flex flex-col md:flex-row md:items-center justify-between gap-2 bg-mint/10 p-3 rounded-lg">
-                  <span className="text-navy">{application.profiles.username}</span>
-                  {application.status === 'pending' && (
-                    <div className="flex space-x-2">
-                      <Button 
-                        size="sm" 
-                        variant="default"
-                        onClick={() => updateApplicationStatus({ 
-                          applicationId: application.id, 
-                          status: 'accepted' 
-                        })}
-                        className="bg-teal hover:bg-teal/90 text-cream"
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="destructive"
-                        onClick={() => updateApplicationStatus({ 
-                          applicationId: application.id, 
-                          status: 'rejected' 
-                        })}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                  {application.status !== 'pending' && (
-                    <span className={`capitalize ${
-                      application.status === 'accepted' ? 'text-green-500' : 'text-red-500'
-                    }`}>
-                      {application.status}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
+        {showApplications && (
+          <ApplicationsList 
+            applications={applications || []}
+            onUpdateStatus={handleUpdateStatus}
+            isUpdating={isUpdating}
+          />
         )}
       </CardContent>
     </Card>

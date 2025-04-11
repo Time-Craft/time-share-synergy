@@ -1,4 +1,3 @@
-
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
@@ -21,17 +20,7 @@ export const useApplicationManagement = (offerId?: string) => {
         () => {
           queryClient.invalidateQueries({ queryKey: ['offer-applications'] })
           queryClient.invalidateQueries({ queryKey: ['user-application'] })
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles'
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['profile'] })
+          queryClient.invalidateQueries({ queryKey: ['user-applications'] })
         }
       )
       .subscribe()
@@ -83,6 +72,22 @@ export const useApplicationManagement = (offerId?: string) => {
     enabled: !!offerId
   })
 
+  const { data: userApplications } = useQuery({
+    queryKey: ['user-applications'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return []
+
+      const { data, error } = await supabase
+        .from('offer_applications')
+        .select('*')
+        .eq('applicant_id', user.id)
+      
+      if (error) throw error
+      return data
+    }
+  })
+
   const applyToOffer = useMutation({
     mutationFn: async (offerId: string) => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -103,8 +108,11 @@ export const useApplicationManagement = (offerId?: string) => {
         title: "Success",
         description: "Application submitted successfully",
       })
+      queryClient.invalidateQueries({ queryKey: ['offer-applications'] })
+      queryClient.invalidateQueries({ queryKey: ['user-application'] })
+      queryClient.invalidateQueries({ queryKey: ['user-applications'] })
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: "Failed to submit application: " + error.message,
@@ -123,43 +131,53 @@ export const useApplicationManagement = (offerId?: string) => {
         })
         .eq('id', applicationId)
       
-      if (applicationError) throw applicationError
+      if (applicationError) {
+        console.error('Application update error:', applicationError)
+        return
+      }
 
       if (status === 'accepted') {
-        const { data: application } = await supabase
+        const { data: application, error: fetchError } = await supabase
           .from('offer_applications')
           .select('offer_id')
           .eq('id', applicationId)
           .single()
 
-        if (application) {
+        if (fetchError) {
+          console.error('Fetch application error:', fetchError)
+          return
+        }
+        
+        if (application && application.offer_id) {
           const { error: offerError } = await supabase
             .from('offers')
-            .update({ status: 'booked' })
+            .update({ 
+              status: 'booked', 
+              updated_at: new Date().toISOString()
+            })
             .eq('id', application.offer_id)
 
-          if (offerError) throw offerError
+          if (offerError) {
+            console.error("Error updating offer status:", offerError);
+            return
+          }
         }
       }
     },
     onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Application status updated successfully",
-      })
+      queryClient.invalidateQueries({ queryKey: ['offer-applications'] })
+      queryClient.invalidateQueries({ queryKey: ['offers'] })
+      queryClient.invalidateQueries({ queryKey: ['user-applications'] })
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to update application status: " + error.message,
-        variant: "destructive",
-      })
+    onError: (error: Error) => {
+      console.error('Application status update error:', error)
     }
   })
 
   return {
     applications,
     userApplication,
+    userApplications,
     isLoadingApplications,
     applyToOffer: applyToOffer.mutate,
     updateApplicationStatus: updateApplicationStatus.mutate,
