@@ -43,16 +43,7 @@ const CompletedOffers = ({ userId, username, avatar }: CompletedOffersProps) => 
           hours,
           created_at,
           offer_id,
-          offers!inner(
-            title,
-            description,
-            service_type,
-            time_credits,
-            status,
-            profiles!inner(
-              username
-            )
-          )
+          user_id
         `)
         .eq('provider_id', userId)
         .order('created_at', { ascending: false })
@@ -62,17 +53,47 @@ const CompletedOffers = ({ userId, username, avatar }: CompletedOffersProps) => 
         throw error
       }
 
-      // Transform the data to match our needs
-      return data.map(transaction => ({
-        id: transaction.id,
-        title: transaction.offers.title,
-        description: transaction.offers.description,
-        service_type: transaction.service,
-        time_credits: transaction.offers.time_credits,
-        hours: transaction.hours,
-        created_at: transaction.created_at,
-        requester_username: transaction.offers.profiles.username
-      }))
+      // For each transaction, get the offer details
+      const completedOffers = []
+      
+      for (const transaction of data) {
+        // Get offer details
+        const { data: offerData, error: offerError } = await supabase
+          .from('offers')
+          .select('title, description, service_type, time_credits')
+          .eq('id', transaction.offer_id)
+          .single()
+          
+        if (offerError) {
+          console.warn(`Error fetching offer ${transaction.offer_id}:`, offerError)
+          continue
+        }
+        
+        // Get requester username
+        const { data: userData, error: userError } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', transaction.user_id)
+          .single()
+          
+        if (userError) {
+          console.warn(`Error fetching user ${transaction.user_id}:`, userError)
+        }
+
+        completedOffers.push({
+          id: transaction.id,
+          title: offerData?.title || 'Unknown Title',
+          description: offerData?.description || 'No description available',
+          service_type: transaction.service,
+          time_credits: offerData?.time_credits || 0,
+          hours: transaction.hours,
+          created_at: transaction.created_at,
+          completed_at: transaction.created_at, // Using created_at as completed_at
+          requester_username: userData?.username || 'Unknown User'
+        })
+      }
+
+      return completedOffers
     },
     enabled: !!userId
   })
@@ -92,16 +113,7 @@ const CompletedOffers = ({ userId, username, avatar }: CompletedOffersProps) => 
           hours,
           created_at,
           provider_id,
-          offer_id,
-          offers!inner(
-            title,
-            description,
-            service_type,
-            time_credits
-          ),
-          profiles!provider_id(
-            username
-          )
+          offer_id
         `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
@@ -111,17 +123,47 @@ const CompletedOffers = ({ userId, username, avatar }: CompletedOffersProps) => 
         throw error
       }
 
-      // Transform the data to match our needs
-      return data.map(transaction => ({
-        id: transaction.id,
-        title: transaction.offers.title,
-        description: transaction.offers.description,
-        service_type: transaction.service,
-        time_credits: transaction.offers.time_credits,
-        hours: transaction.hours,
-        created_at: transaction.created_at,
-        provider_username: transaction.profiles?.username || 'Unknown'
-      }))
+      // For each transaction, get the offer details
+      const completedOffers = []
+      
+      for (const transaction of data) {
+        // Get offer details
+        const { data: offerData, error: offerError } = await supabase
+          .from('offers')
+          .select('title, description, service_type, time_credits')
+          .eq('id', transaction.offer_id)
+          .single()
+          
+        if (offerError) {
+          console.warn(`Error fetching offer ${transaction.offer_id}:`, offerError)
+          continue
+        }
+        
+        // Get provider username
+        const { data: providerData, error: providerError } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', transaction.provider_id)
+          .single()
+          
+        if (providerError) {
+          console.warn(`Error fetching provider ${transaction.provider_id}:`, providerError)
+        }
+
+        completedOffers.push({
+          id: transaction.id,
+          title: offerData?.title || 'Unknown Title',
+          description: offerData?.description || 'No description available',
+          service_type: transaction.service,
+          time_credits: offerData?.time_credits || 0,
+          hours: transaction.hours,
+          created_at: transaction.created_at,
+          completed_at: transaction.created_at, // Using created_at as completed_at
+          provider_username: providerData?.username || 'Unknown Provider'
+        })
+      }
+
+      return completedOffers
     },
     enabled: !!userId
   })

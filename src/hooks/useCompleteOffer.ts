@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
@@ -26,15 +25,16 @@ export const useCompleteOffer = () => {
         throw new Error('Only the offer owner can mark it as completed')
       }
       
-      // Get the accepted applicant
+      // Get the accepted applicant - using maybeSingle() to handle cases when there's no accepted application
       const { data: acceptedApplication, error: applicationError } = await supabase
         .from('offer_applications')
         .select('applicant_id')
         .eq('offer_id', offerId)
         .eq('status', 'accepted')
-        .single()
+        .maybeSingle()
       
-      if (applicationError) throw new Error('No accepted application found for this offer')
+      if (applicationError) throw applicationError
+      if (!acceptedApplication) throw new Error('No accepted application found for this offer')
       
       // Update the offer status to completed
       const { error: updateError } = await supabase
@@ -47,28 +47,37 @@ export const useCompleteOffer = () => {
       
       if (updateError) throw updateError
       
-      // First get the current balance of the service provider
+      // Check if provider already has a time balance
       const { data: currentBalance, error: balanceReadError } = await supabase
         .from('time_balances')
         .select('balance')
         .eq('user_id', acceptedApplication.applicant_id)
-        .single()
+        .maybeSingle()
       
-      if (balanceReadError) throw balanceReadError
-      
-      // Calculate new balance
-      const newBalance = currentBalance.balance + (offer.time_credits || 1)
-      
-      // Transfer the credits to the service provider (applicant who completed the service)
-      const { error: balanceError } = await supabase
-        .from('time_balances')
-        .update({ 
-          balance: newBalance,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', acceptedApplication.applicant_id)
-      
-      if (balanceError) throw balanceError
+      // If no balance entry exists yet, create one with the earned credits
+      if (!currentBalance) {
+        const { error: createBalanceError } = await supabase
+          .from('time_balances')
+          .insert({ 
+            user_id: acceptedApplication.applicant_id,
+            balance: offer.time_credits || 1
+          })
+        
+        if (createBalanceError) throw createBalanceError
+      } else {
+        // Otherwise update the existing balance
+        const newBalance = currentBalance.balance + (offer.time_credits || 1)
+        
+        const { error: balanceError } = await supabase
+          .from('time_balances')
+          .update({ 
+            balance: newBalance,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', acceptedApplication.applicant_id)
+        
+        if (balanceError) throw balanceError
+      }
       
       // Create a transaction record
       const { error: transactionError } = await supabase
@@ -82,12 +91,20 @@ export const useCompleteOffer = () => {
         })
       
       if (transactionError) throw transactionError
+
+      return {
+        success: true,
+        providerId: acceptedApplication.applicant_id,
+        credits: offer.time_credits || 1
+      }
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast({
         title: "Success",
-        description: "Offer marked as completed and credits transferred",
+        description: `Offer marked as completed and ${result.credits} credits transferred`,
       })
+      
+      // Invalidate all relevant queries to update the UI
       queryClient.invalidateQueries({ queryKey: ['user-offers'] })
       queryClient.invalidateQueries({ queryKey: ['offers'] })
       queryClient.invalidateQueries({ queryKey: ['time-balance'] })
@@ -96,11 +113,8 @@ export const useCompleteOffer = () => {
       queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to complete offer: " + error.message,
-        variant: "destructive",
-      })
+      console.error("Error completing offer:", error)
+      // We're removing the error toast as requested
     }
   })
 
