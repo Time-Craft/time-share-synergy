@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
@@ -49,52 +50,31 @@ const Offer = () => {
   const [timeCredits, setTimeCredits] = useState([1])
   const { toast } = useToast()
 
-  const { data: userOffers, isLoading: userOffersLoading } = useQuery({
-    queryKey: ['user-offers'],
+  const { data: timeBalance } = useQuery({
+    queryKey: ['time-balance'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("No user found")
 
       const { data, error } = await supabase
-        .from('offers')
-        .select('time_credits')
-        .eq('profile_id', user.id)
+        .from('time_balances')
+        .select('balance')
+        .eq('user_id', user.id)
+        .maybeSingle()
 
       if (error) {
-        console.error('Error fetching user offers:', error)
+        console.error('Error fetching time balance:', error)
         throw error
       }
       
-      return data
+      return data?.balance || 0
     }
   })
-
-  const calculateTimeBalance = () => {
-    const INITIAL_CREDITS = 30;
-    
-    if (userOffersLoading || !userOffers) {
-      return INITIAL_CREDITS;
-    }
-    
-    const usedCredits = userOffers.reduce((sum, offer) => 
-      sum + (offer.time_credits || 0), 0);
-    
-    return INITIAL_CREDITS - usedCredits;
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     const finalServiceType = serviceType === "Others" ? otherServiceType : serviceType
-    
-    if (calculateTimeBalance() < timeCredits[0]) {
-      toast({
-        title: "Insufficient Credits",
-        description: `You only have ${calculateTimeBalance()} credits, but this request requires ${timeCredits[0]}.`,
-        variant: "destructive"
-      })
-      return
-    }
     
     await createOffer({
       title: finalServiceType,
@@ -109,9 +89,8 @@ const Offer = () => {
     navigate('/profile')
   }
 
-  const hasNoCredits = calculateTimeBalance() <= 0
-
-  const maxCredits = Math.min(5, calculateTimeBalance())
+  // Set maximum allowed credits for slider (max 100 for reasonable UI)
+  const maxCredits = 100
 
   return (
     <div className="container mx-auto p-4 max-w-2xl">
@@ -124,22 +103,12 @@ const Offer = () => {
             <div className="flex items-center space-x-2">
               <CreditCard className="h-4 w-4 text-teal" />
               <span className="text-sm font-medium">
-                {userOffersLoading ? "Loading..." : `Available: ${calculateTimeBalance()} credits`}
+                {timeBalance !== undefined ? `Available: ${timeBalance} credits` : "Loading..."}
               </span>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {hasNoCredits && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Warning</AlertTitle>
-              <AlertDescription>
-                You don't have enough credits to create a request.
-              </AlertDescription>
-            </Alert>
-          )}
-          
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <label className="text-sm font-medium">Service Type</label>
@@ -227,7 +196,6 @@ const Offer = () => {
                     <Button
                       variant="outline"
                       className="w-full justify-start font-normal"
-                      disabled={hasNoCredits}
                     >
                       <CreditCard className="mr-2 h-4 w-4" />
                       {timeCredits[0]} Credit{timeCredits[0] !== 1 ? 's' : ''}
@@ -240,21 +208,16 @@ const Offer = () => {
                         value={timeCredits}
                         onValueChange={setTimeCredits}
                         min={1}
-                        max={maxCredits > 0 ? maxCredits : 1}
+                        max={maxCredits}
                         step={1}
                         className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
-                        disabled={hasNoCredits}
                       />
                       <div className="flex justify-between">
                         <span className="text-xs text-muted-foreground">1 Credit</span>
-                        <span className="text-xs text-muted-foreground">{maxCredits > 0 ? maxCredits : 1} Credits</span>
+                        <span className="text-xs text-muted-foreground">{maxCredits} Credits</span>
                       </div>
                       <div className="mt-2 text-center text-sm text-muted-foreground">
-                        {timeCredits[0] > calculateTimeBalance() ? (
-                          <span className="text-destructive">Insufficient credits!</span>
-                        ) : (
-                          <span>You have {calculateTimeBalance()} credits available</span>
-                        )}
+                        <span>You have {timeBalance || 0} credits available</span>
                       </div>
                     </div>
                   </PopoverContent>
@@ -268,7 +231,7 @@ const Offer = () => {
               </Button>
               <Button 
                 type="submit" 
-                disabled={isCreating || timeCredits[0] > calculateTimeBalance() || hasNoCredits}
+                disabled={isCreating}
                 className="bg-teal hover:bg-teal/90 text-cream"
               >
                 {isCreating ? "Creating..." : "Create Request"}
