@@ -2,6 +2,7 @@
 import HomeHeader from "@/components/home/HomeHeader"
 import PendingOffers from "@/components/home/PendingOffers"
 import QuickStats from "@/components/home/QuickStats"
+import CompletedOffersView from "@/components/home/CompletedOffersView"
 import { useOfferSubscription } from "@/hooks/useOfferSubscription"
 import { useEffect } from "react"
 import { useQueryClient } from "@tanstack/react-query"
@@ -31,6 +32,7 @@ const Home = () => {
       <QuickStats />
       <div className="space-y-6">
         <PendingOffers />
+        <CompletedOffersView />
       </div>
     </div>
   )
