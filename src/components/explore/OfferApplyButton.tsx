@@ -34,12 +34,47 @@ const OfferApplyButton = ({
     try {
       setIsClaiming(true)
       
-      const { error } = await supabase
+      // First get the current user ID
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+      
+      // Get the transaction associated with this offer to get the credit amount
+      const { data: transaction, error: transactionError } = await supabase
+        .from('transactions')
+        .select('hours, claimed')
+        .eq('offer_id', offerId)
+        .single()
+        
+      if (transactionError) throw transactionError
+      
+      if (transaction.claimed) {
+        toast({
+          variant: "default",
+          title: "Already Claimed",
+          description: "You have already claimed credits for this offer.",
+        })
+        setIsClaimed(true)
+        return
+      }
+
+      // Update the user's time balance with the credits from the transaction
+      const { error: updateError } = await supabase
+        .from('time_balances')
+        .update({ 
+          balance: supabase.rpc('increment_balance', { amount: transaction.hours }),
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id)
+
+      if (updateError) throw updateError
+
+      // Mark the transaction as claimed
+      const { error: claimError } = await supabase
         .from('transactions')
         .update({ claimed: true })
         .eq('offer_id', offerId)
 
-      if (error) throw error
+      if (claimError) throw claimError
 
       toast({
         title: "Success",
@@ -52,7 +87,9 @@ const OfferApplyButton = ({
       // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
       queryClient.invalidateQueries({ queryKey: ['time-balance'] })
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] })
     } catch (error: any) {
+      console.error('Claim credits error:', error)
       toast({
         variant: "destructive",
         title: "Error",

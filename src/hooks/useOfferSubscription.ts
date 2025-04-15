@@ -38,6 +38,24 @@ export const useOfferSubscription = () => {
         () => {
           console.log('Time balance change detected')
           queryClient.invalidateQueries({ queryKey: ['time-balance'] })
+          queryClient.invalidateQueries({ queryKey: ['user-stats'] })
+        }
+      )
+      .subscribe()
+
+    const transactionsChannel = supabase
+      .channel('transactions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions'
+        },
+        () => {
+          console.log('Transaction change detected')
+          queryClient.invalidateQueries({ queryKey: ['time-balance'] })
+          queryClient.invalidateQueries({ queryKey: ['completed-offers'] })
         }
       )
       .subscribe()
@@ -45,6 +63,7 @@ export const useOfferSubscription = () => {
     return () => {
       supabase.removeChannel(channel)
       supabase.removeChannel(timeBalancesChannel)
+      supabase.removeChannel(transactionsChannel)
     }
   }, [queryClient])
 }
