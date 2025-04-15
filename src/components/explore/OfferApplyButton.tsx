@@ -38,14 +38,23 @@ const OfferApplyButton = ({
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
       
-      // Get the transaction associated with this offer to get the credit amount
-      const { data: transaction, error: transactionError } = await supabase
+      // Get the transaction associated with this offer
+      // Using .eq() and not .single() to handle multiple rows properly
+      const { data: transactions, error: transactionError } = await supabase
         .from('transactions')
         .select('hours, claimed')
         .eq('offer_id', offerId)
-        .single()
-        
+        .eq('provider_id', user.id)
+      
       if (transactionError) throw transactionError
+      
+      // Check if we have any transaction records
+      if (!transactions || transactions.length === 0) {
+        throw new Error('No transaction found for this offer')
+      }
+      
+      // Use the first transaction (there should only be one per provider and offer)
+      const transaction = transactions[0]
       
       if (transaction.claimed) {
         toast({
@@ -85,6 +94,7 @@ const OfferApplyButton = ({
         .from('transactions')
         .update({ claimed: true })
         .eq('offer_id', offerId)
+        .eq('provider_id', user.id)
 
       if (claimError) throw claimError
 

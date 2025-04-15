@@ -52,10 +52,28 @@ export const useOfferSubscription = () => {
           schema: 'public',
           table: 'transactions'
         },
-        () => {
-          console.log('Transaction change detected')
+        (payload) => {
+          console.log('Transaction change detected', payload)
           queryClient.invalidateQueries({ queryKey: ['time-balance'] })
           queryClient.invalidateQueries({ queryKey: ['completed-offers'] })
+          queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
+          queryClient.invalidateQueries({ queryKey: ['user-stats'] })
+        }
+      )
+      .subscribe()
+
+    const applicationsChannel = supabase
+      .channel('applications-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'offer_applications'
+        },
+        () => {
+          console.log('Application change detected')
+          queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
         }
       )
       .subscribe()
@@ -64,6 +82,7 @@ export const useOfferSubscription = () => {
       supabase.removeChannel(channel)
       supabase.removeChannel(timeBalancesChannel)
       supabase.removeChannel(transactionsChannel)
+      supabase.removeChannel(applicationsChannel)
     }
   }, [queryClient])
 }

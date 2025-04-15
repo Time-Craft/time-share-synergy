@@ -1,7 +1,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
-import { useToast } from '@/components/ui/use-toast'
+import { useToast } from '@/hooks/use-toast'
 
 export const useCompleteOffer = () => {
   const queryClient = useQueryClient()
@@ -32,14 +32,18 @@ export const useCompleteOffer = () => {
       }
       
       // Get the accepted applicant
-      const { data: acceptedApplication, error: applicationError } = await supabase
+      const { data: acceptedApplications, error: applicationError } = await supabase
         .from('offer_applications')
         .select('applicant_id')
         .eq('offer_id', offerId)
         .eq('status', 'accepted')
-        .single()
       
-      if (applicationError) throw new Error('No accepted application found for this offer')
+      if (applicationError) throw applicationError
+      if (!acceptedApplications || acceptedApplications.length === 0) {
+        throw new Error('No accepted application found for this offer')
+      }
+      
+      const acceptedApplication = acceptedApplications[0]
       
       // Update the offer status to completed
       const { error: updateError } = await supabase
@@ -52,30 +56,8 @@ export const useCompleteOffer = () => {
       
       if (updateError) throw updateError
       
-      // First get the current balance of the service provider
-      const { data: currentBalance, error: balanceReadError } = await supabase
-        .from('time_balances')
-        .select('balance')
-        .eq('user_id', acceptedApplication.applicant_id)
-        .single()
-      
-      if (balanceReadError) throw balanceReadError
-      
-      // Calculate new balance
-      const newBalance = currentBalance.balance + (offer.time_credits || 1)
-      
-      // Transfer the credits to the service provider (applicant who completed the service)
-      const { error: balanceError } = await supabase
-        .from('time_balances')
-        .update({ 
-          balance: newBalance,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', acceptedApplication.applicant_id)
-      
-      if (balanceError) throw balanceError
-      
-      // Create a transaction record
+      // Create a transaction record for the completed offer
+      // The service provider will claim these credits later
       const { error: transactionError } = await supabase
         .from('transactions')
         .insert({
@@ -83,7 +65,8 @@ export const useCompleteOffer = () => {
           hours: offer.time_credits || 1,
           user_id: user.id,  // Requester
           provider_id: acceptedApplication.applicant_id,  // Service provider
-          offer_id: offerId
+          offer_id: offerId,
+          claimed: false  // Provider will claim these credits later
         })
       
       if (transactionError) throw transactionError
@@ -91,7 +74,7 @@ export const useCompleteOffer = () => {
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Offer marked as completed and credits transferred",
+        description: "Offer marked as completed. The service provider can now claim their credits.",
       })
       queryClient.invalidateQueries({ queryKey: ['user-offers'] })
       queryClient.invalidateQueries({ queryKey: ['offers'] })
