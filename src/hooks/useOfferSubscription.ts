@@ -3,6 +3,17 @@ import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 
+// Define a type for the transaction payload
+type TransactionPayload = {
+  new: {
+    provider_id?: string
+    user_id?: string
+    [key: string]: any
+  }
+  old: Record<string, any>
+  [key: string]: any
+}
+
 export const useOfferSubscription = () => {
   const queryClient = useQueryClient()
 
@@ -52,12 +63,13 @@ export const useOfferSubscription = () => {
           schema: 'public',
           table: 'transactions'
         },
-        (payload) => {
+        (payload: TransactionPayload) => {
           console.log('Transaction change detected', payload)
           queryClient.invalidateQueries({ queryKey: ['time-balance'] })
           queryClient.invalidateQueries({ queryKey: ['completed-offers'] })
           queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
           queryClient.invalidateQueries({ queryKey: ['user-stats'] })
+          
           // Make sure we invalidate both the provider and requester's data
           if (payload.new && payload.new.provider_id) {
             queryClient.invalidateQueries({ queryKey: ['user', payload.new.provider_id] })
