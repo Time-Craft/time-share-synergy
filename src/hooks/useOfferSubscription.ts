@@ -3,6 +3,21 @@ import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 
+// Define payload types to fix TypeScript errors
+interface TransactionPayload {
+  new?: {
+    provider_id?: string;
+    user_id?: string;
+    [key: string]: any;
+  };
+  old?: {
+    provider_id?: string;
+    user_id?: string;
+    [key: string]: any;
+  };
+  [key: string]: any;
+}
+
 export const useOfferSubscription = () => {
   const queryClient = useQueryClient()
 
@@ -65,8 +80,18 @@ export const useOfferSubscription = () => {
           schema: 'public',
           table: 'transactions'
         },
-        (payload) => {
+        (payload: TransactionPayload) => {
           console.log('Transaction change detected', payload)
+          
+          // Make sure to check if these properties exist before accessing them
+          if (payload.new?.provider_id) {
+            queryClient.invalidateQueries({ queryKey: ['completed-offers', payload.new.provider_id] })
+          }
+          
+          if (payload.new?.user_id) {
+            queryClient.invalidateQueries({ queryKey: ['completed-offers', payload.new.user_id] })
+          }
+          
           queryClient.invalidateQueries({ queryKey: ['time-balance'] })
           queryClient.invalidateQueries({ queryKey: ['transactions'] })
           queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
