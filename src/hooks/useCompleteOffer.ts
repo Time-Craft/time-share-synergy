@@ -57,7 +57,7 @@ export const useCompleteOffer = () => {
       if (updateError) throw updateError
       
       // Create a transaction record for the completed offer
-      // The service provider will claim these credits later
+      // Service provider will claim these credits later
       const { error: transactionError } = await supabase
         .from('transactions')
         .insert({

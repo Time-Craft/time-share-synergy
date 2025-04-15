@@ -38,11 +38,10 @@ const OfferApplyButton = ({
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
       
-      // Get the transaction associated with this offer
-      // Using .eq() and not .single() to handle multiple rows properly
+      // Get the transaction associated with this offer and the current user as provider
       const { data: transactions, error: transactionError } = await supabase
         .from('transactions')
-        .select('hours, claimed')
+        .select('id, hours, claimed')
         .eq('offer_id', offerId)
         .eq('provider_id', user.id)
       
@@ -66,7 +65,7 @@ const OfferApplyButton = ({
         return
       }
 
-      // First get the current balance
+      // Get the current balance
       const { data: currentBalance, error: balanceError } = await supabase
         .from('time_balances')
         .select('balance')
@@ -93,14 +92,13 @@ const OfferApplyButton = ({
       const { error: claimError } = await supabase
         .from('transactions')
         .update({ claimed: true })
-        .eq('offer_id', offerId)
-        .eq('provider_id', user.id)
+        .eq('id', transaction.id)
 
       if (claimError) throw claimError
 
       toast({
         title: "Success",
-        description: "Credits have been claimed successfully!",
+        description: `${transaction.hours} credits have been added to your balance!`,
       })
 
       // Set local state to show claimed status

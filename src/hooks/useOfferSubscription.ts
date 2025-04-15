@@ -58,6 +58,13 @@ export const useOfferSubscription = () => {
           queryClient.invalidateQueries({ queryKey: ['completed-offers'] })
           queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
           queryClient.invalidateQueries({ queryKey: ['user-stats'] })
+          // Make sure we invalidate both the provider and requester's data
+          if (payload.new && payload.new.provider_id) {
+            queryClient.invalidateQueries({ queryKey: ['user', payload.new.provider_id] })
+          }
+          if (payload.new && payload.new.user_id) {
+            queryClient.invalidateQueries({ queryKey: ['user', payload.new.user_id] })
+          }
         }
       )
       .subscribe()
