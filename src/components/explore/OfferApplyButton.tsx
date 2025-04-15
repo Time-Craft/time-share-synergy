@@ -1,10 +1,9 @@
 
 import { Button } from "@/components/ui/button"
 import { Check, Gift, Hourglass } from "lucide-react"
-import { useQueryClient } from "@tanstack/react-query"
-import { supabase } from "@/integrations/supabase/client"
-import { useToast } from "@/hooks/use-toast"
-import { useState } from "react"
+import { useClaimCredits } from "@/hooks/useClaimCredits"
+import { useState, useEffect } from "react"
+import { Badge } from "@/components/ui/badge"
 
 interface OfferApplyButtonProps {
   offerId: string
@@ -14,6 +13,7 @@ interface OfferApplyButtonProps {
   userApplication?: any
   onApply: (offerId: string) => void
   isApplying: boolean
+  timeCredits?: number
 }
 
 const OfferApplyButton = ({ 
@@ -23,117 +23,62 @@ const OfferApplyButton = ({
   applicationStatus, 
   userApplication, 
   onApply, 
-  isApplying 
+  isApplying,
+  timeCredits = 1
 }: OfferApplyButtonProps) => {
-  const { toast } = useToast()
-  const queryClient = useQueryClient()
-  const [isClaiming, setIsClaiming] = useState(false)
-  const [isClaimed, setIsClaimed] = useState(false)
+  // Use initialClaimed from the hook to set the initial state
+  const { claimCredits, isClaiming, isClaimed: initialClaimed } = useClaimCredits()
+  const [isClaimed, setIsClaimed] = useState(initialClaimed)
+  
+  // Update local claimed state if transaction is already claimed (from the database)
+  useEffect(() => {
+    if (initialClaimed) {
+      setIsClaimed(true)
+    }
+  }, [initialClaimed])
+
+  // Check if the userApplication includes claimed status
+  useEffect(() => {
+    if (userApplication?.claimed) {
+      setIsClaimed(true)
+    }
+  }, [userApplication])
 
   const handleClaim = async () => {
     try {
-      setIsClaiming(true)
-      
-      // First get the current user ID
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
-      
-      // Get the transaction associated with this offer and the current user as provider
-      const { data: transactions, error: transactionError } = await supabase
-        .from('transactions')
-        .select('id, hours, claimed')
-        .eq('offer_id', offerId)
-        .eq('provider_id', user.id)
-      
-      if (transactionError) throw transactionError
-      
-      // Check if we have any transaction records
-      if (!transactions || transactions.length === 0) {
-        throw new Error('No transaction found for this offer')
-      }
-      
-      // Use the first transaction (there should only be one per provider and offer)
-      const transaction = transactions[0]
-      
-      if (transaction.claimed) {
-        toast({
-          variant: "default",
-          title: "Already Claimed",
-          description: "You have already claimed credits for this offer.",
-        })
-        setIsClaimed(true)
-        return
-      }
-
-      // Get the current balance
-      const { data: currentBalance, error: balanceError } = await supabase
-        .from('time_balances')
-        .select('balance')
-        .eq('user_id', user.id)
-        .single()
-        
-      if (balanceError) throw balanceError
-      
-      // Calculate the new balance by adding the transaction hours
-      const newBalance = currentBalance.balance + transaction.hours
-      
-      // Update the user's time balance with the credits from the transaction
-      const { error: updateError } = await supabase
-        .from('time_balances')
-        .update({ 
-          balance: newBalance,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id)
-
-      if (updateError) throw updateError
-
-      // Mark the transaction as claimed
-      const { error: claimError } = await supabase
-        .from('transactions')
-        .update({ claimed: true })
-        .eq('id', transaction.id)
-
-      if (claimError) throw claimError
-
-      toast({
-        title: "Success",
-        description: `${transaction.hours} credits have been added to your balance!`,
-      })
-
-      // Set local state to show claimed status
+      // Immediately update the UI state to prevent multiple clicks
       setIsClaimed(true)
-
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
-      queryClient.invalidateQueries({ queryKey: ['time-balance'] })
-      queryClient.invalidateQueries({ queryKey: ['user-stats'] })
-    } catch (error: any) {
-      console.error('Claim credits error:', error)
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to claim credits: " + error.message,
+      
+      // Actually perform the claim operation
+      await claimCredits({ 
+        offerId, 
+        hours: timeCredits 
       })
-    } finally {
-      setIsClaiming(false)
+    } catch (error) {
+      // Don't revert UI state even on error to avoid confusion
+      console.error("Error claiming credits:", error)
     }
   }
   
   // Only show claim button for service providers (applicants) when the offer is completed
   if (isApplied && status === 'completed' && (applicationStatus === 'accepted' || userApplication?.status === 'accepted')) {
+    if (isClaimed) {
+      return (
+        <Badge variant="outline" className="bg-gray-100 text-gray-600 py-1 px-3 mt-4 md:mt-0">
+          <Gift className="h-4 w-4 mr-1 inline" />
+          Credits Claimed
+        </Badge>
+      )
+    }
+    
     return (
       <Button 
         onClick={handleClaim}
-        disabled={isClaiming || isClaimed}
-        className={`w-full md:w-auto mt-4 md:mt-0 ${
-          isClaimed 
-            ? 'bg-gray-400 hover:bg-gray-400' 
-            : 'bg-green-500 hover:bg-green-600'
-        } text-white`}
+        disabled={isClaiming}
+        className="w-full md:w-auto mt-4 md:mt-0 bg-green-500 hover:bg-green-600 text-white"
       >
         <Gift className="h-4 w-4 mr-1" />
-        {isClaimed ? 'Credits Claimed' : 'Claim Credits'}
+        Claim Credits
       </Button>
     )
   }

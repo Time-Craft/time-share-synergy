@@ -1,19 +1,9 @@
 
-import { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useState, useEffect } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
-import { Card, CardContent } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import { User } from "lucide-react"
-import { CompletedOfferCard } from "./CompletedOfferCard"
 
-interface CompletedOffersProps {
-  userId: string | null
-  username?: string
-  avatar?: string
-}
-
-interface CompletedOffer {
+export interface CompletedOffer {
   id: string
   title: string
   description: string
@@ -22,9 +12,41 @@ interface CompletedOffer {
   hours: number
   created_at: string
   provider_username?: string
+  claimed?: boolean
 }
 
-const CompletedOffers = ({ userId }: CompletedOffersProps) => {
+export function useCompletedOffers(userId: string | null) {
+  const queryClient = useQueryClient()
+  const [localClaimed, setLocalClaimed] = useState<Record<string, boolean>>({})
+  
+  // Set up real-time subscription for transactions
+  useEffect(() => {
+    if (!userId) return
+    
+    const transactionsChannel = supabase
+      .channel('completed-offers-transactions')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions'
+        },
+        (payload) => {
+          console.log('Transaction update in CompletedOffers:', payload)
+          queryClient.invalidateQueries({ queryKey: ['completed-offers'] })
+          queryClient.invalidateQueries({ queryKey: ['time-balance'] })
+          queryClient.refetchQueries({ queryKey: ['completed-offers'] })
+          queryClient.refetchQueries({ queryKey: ['time-balance'] })
+        }
+      )
+      .subscribe()
+      
+    return () => {
+      supabase.removeChannel(transactionsChannel)
+    }
+  }, [userId, queryClient])
+  
   // Fetch offers completed FOR the user (user made the request)
   const { data: completedForYou, isLoading: forYouLoading } = useQuery({
     queryKey: ['completed-offers', userId, 'for-you'],
@@ -40,7 +62,8 @@ const CompletedOffers = ({ userId }: CompletedOffersProps) => {
           hours,
           created_at,
           provider_id,
-          offer_id
+          offer_id,
+          claimed
         `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
@@ -90,7 +113,8 @@ const CompletedOffers = ({ userId }: CompletedOffersProps) => {
               time_credits: offerData.time_credits || 0,
               hours: transaction.hours,
               created_at: transaction.created_at,
-              provider_username: providerData?.username || 'Unknown'
+              provider_username: providerData?.username || 'Unknown',
+              claimed: transaction.claimed || false
             }
           } catch (err) {
             console.error('Error processing transaction:', err)
@@ -100,39 +124,33 @@ const CompletedOffers = ({ userId }: CompletedOffersProps) => {
       )
 
       // Filter out nulls and remove duplicates
-      return offerDetails.filter(Boolean) as CompletedOffer[]
+      const validOffers = offerDetails.filter(Boolean) as CompletedOffer[]
+      
+      // Update the local claimed state
+      validOffers.forEach(offer => {
+        if (offer.claimed) {
+          setLocalClaimed(prev => ({ ...prev, [offer.id]: true }))
+        }
+      })
+      
+      return validOffers
     },
-    enabled: !!userId
+    enabled: !!userId,
+    refetchInterval: 10000 // Refetch every 10 seconds to ensure updated data
   })
 
-  if (forYouLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-36 w-full" />
-        <Skeleton className="h-36 w-full" />
-      </div>
-    )
+  // Function to mark an offer as claimed locally (optimistic UI update)
+  const setOfferAsClaimed = (offerId: string) => {
+    setLocalClaimed(prev => ({ ...prev, [offerId]: true }))
+    // Also invalidate the time-balance query to ensure it's up to date
+    queryClient.invalidateQueries({ queryKey: ['time-balance'] })
+    queryClient.refetchQueries({ queryKey: ['time-balance'] })
   }
 
-  if (!completedForYou?.length) {
-    return (
-      <p className="text-center text-muted-foreground py-8">
-        No completed services found
-      </p>
-    )
+  return {
+    completedForYou,
+    forYouLoading,
+    localClaimed,
+    setOfferAsClaimed
   }
-
-  return (
-    <div className="space-y-4">
-      {completedForYou.map((offer) => (
-        <CompletedOfferCard
-          key={offer.id}
-          offer={offer}
-          isForYou={true}
-        />
-      ))}
-    </div>
-  )
 }
-
-export default CompletedOffers
