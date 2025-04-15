@@ -57,11 +57,23 @@ const OfferApplyButton = ({
         return
       }
 
+      // First get the current balance
+      const { data: currentBalance, error: balanceError } = await supabase
+        .from('time_balances')
+        .select('balance')
+        .eq('user_id', user.id)
+        .single()
+        
+      if (balanceError) throw balanceError
+      
+      // Calculate the new balance by adding the transaction hours
+      const newBalance = currentBalance.balance + transaction.hours
+      
       // Update the user's time balance with the credits from the transaction
       const { error: updateError } = await supabase
         .from('time_balances')
         .update({ 
-          balance: supabase.rpc('increment_balance', { amount: transaction.hours }),
+          balance: newBalance,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id)
